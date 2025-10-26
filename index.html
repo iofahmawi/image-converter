@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محول الصور السريع</title>
+    <title>محرر الصور السريع</title>
     
     <!-- === PWA Additions === -->
     <meta name="theme-color" content="#f4f7f9">
@@ -18,6 +18,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <!-- ============================== -->
     
+    <!-- === Cropper.js (أداة القص) === -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
     <!-- Library to handle HEIC files -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <!-- Library to create ZIP files -->
@@ -42,13 +46,13 @@
             font-family: 'Cairo', sans-serif;
             background-color: var(--background-color); color: var(--text-color);
             margin: 0;
-            padding: 25px 25px 9px;
+            padding: 25px 25px 5px;
             direction: rtl;
             display: flex;
             flex-direction: column;
             min-height: 100%;
             font-size: 16px;
-            align-items: center; /* توسيط الحاوية أفقيًا */
+            align-items: center; 
         }
         
         button, input, select { font-family: inherit; }
@@ -57,7 +61,6 @@
             width: 98%; max-width: 900px; background: var(--container-bg-color);
             padding: 40px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.07);
             text-align: center;
-            /* === تم حذف الخصائص المسببة للمشكلة === */
             margin-bottom: 40px;
         }
 
@@ -67,8 +70,7 @@
             font-weight: 700; 
             font-size: 1.8em; 
         }
-        h1 span { color: var(--primary-color); font-weight: 900; }
-
+       
         #uploadArea {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             padding: 40px 20px; border: 2px dashed #d0dbe2; border-radius: 12px;
@@ -95,32 +97,26 @@
         #previewContainer {
             background-color: #f9f9f9; border: 1px solid var(--border-color);
             border-radius: 8px; display: flex; justify-content: center; align-items: center;
-            padding: 15px; min-height: 350px; position: relative; cursor: pointer; margin-bottom: 30px;
+            padding: 15px; min-height: 350px; position: relative; margin-bottom: 30px;
+            overflow: hidden;
         }
         #previewImage {
             max-width: 100%; max-height: 450px; object-fit: contain;
-            border-radius: 4px; pointer-events: none;
+            border-radius: 4px;
+            transition: transform 0.3s ease;
         }
         
-        #batchEditorView { display: none; }
-        #fileListContainer {
-            max-height: 400px; overflow-y: auto; display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px; padding: 15px; background-color: #f9f9f9;
-            border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 30px;
+        #cropperContainer {
+            margin-bottom: 20px;
+            max-height: 60vh; 
         }
-        .file-item {
-            background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
-            padding: 8px; text-align: center; overflow: hidden;
-            font-size: 0.85em;
+        #cropperImage {
+            display: block;
+            max-width: 100%;
         }
-        .file-item img {
-            width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 5px;
-        }
-        .file-item-name { word-wrap: break-word; line-height: 1.3; }
 
         .controls-layout { display: flex; gap: 30px; }
-        #controlsContainerSingle, #controlsContainerBatch {
+        #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%;
         }
         .control-group {
@@ -146,27 +142,65 @@
         .dimensions-inputs { display: flex; align-items: center; gap: 10px; width: 100%; }
         #aspectLock {
             background: none; border: none; cursor: pointer; padding: 5px;
-            font-size: 1.5em; color: var(--disabled-color); transition: color 0.3s;
+            font-size: 1.5em; color: var(--primary-color); /* اللون البرتقالي الدائم */
+            display: flex; align-items: center; justify-content: center;
         }
-        #aspectLock.active { color: var(--primary-color); }
-        #aspectLock:hover { color: var(--primary-hover); }
 
         .info-row { font-size: 0.9em; color: #777; text-align: center; margin-top: 5px; }
         #originalDimensions, #newDimensions { font-weight: bold; direction: ltr; display: inline-block; }
 
         #percentValue, #qualityValue {
-            cursor: pointer; min-width: 60px; text-align: center; padding: 8px 0;
-            border-radius: 4px; transition: background-color 0.2s;
+            cursor: pointer;
+            min-width: 60px;
+            text-align: center;
+            padding: 8px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
             font-size: 1em;
-        }
-        #percentValue:hover, #qualityValue:hover { background-color: #f0f0f0; }
-        #percentInput, #qualityInput { width: 65px; text-align: center; -moz-appearance: textfield; }
-        #percentInput::-webkit-outer-spin-button, #percentInput::-webkit-inner-spin-button,
-        #qualityInput::-webkit-outer-spin-button, #qualityInput::-webkit-inner-spin-button {
-            -webkit-appearance: none; margin: 0;
+            font-weight: 700; /* لجعل الخط سميكًا */
         }
         
-        #actionsContainer { margin-top: 25px; display: flex; gap: 10px; }
+        .transform-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .transform-btn {
+            background-color: #ecf0f1;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .transform-btn:hover {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        .transform-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--secondary-color);
+            transition: fill 0.2s;
+        }
+        #aspectLock svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+            vertical-align: middle;
+        }
+        .transform-btn:hover svg {
+            fill: white;
+        }
+        #crop-mode-btn { width: auto; padding: 0 15px; font-size: 1em; }
+
+        #actionsContainer, #cropActions { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
         .action-btn {
             flex: 1; color: white; padding: 0; height: 44px; line-height: 44px;
             border-radius: 8px; cursor: pointer; font-weight: 700; border: none;
@@ -174,7 +208,15 @@
             text-align: center; position: relative;
             font-size: 1em;
         }
+        
+        #cropActions .action-btn {
+            flex: none;
+            width: auto;
+            padding: 0 30px;
+        }
+        
         .action-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; }
+        
         .action-btn .spinner {
             border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 3px solid #fff;
             width: 20px; height: 20px; animation: spin 1s linear infinite;
@@ -190,39 +232,6 @@
         .action-btn.secondary:hover:not(:disabled) { background-color: var(--secondary-hover); }
         
         .hidden { display: none !important; }
-
-        #infoButton {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background-color: rgba(44, 62, 80, 0.6); color: white;
-            border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 50%;
-            width: 32px; height: 32px; font-size: 18px; font-weight: bold;
-            line-height: 30px; text-align: center; cursor: pointer;
-            transition: all 0.2s ease; opacity: 0; pointer-events: none;
-        }
-        #infoButton.visible { opacity: 1; pointer-events: auto; }
-        #infoButton:hover { background-color: rgba(44, 62, 80, 0.9); transform: translate(-50%, -50%) scale(1.1); }
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background-color: #fefefe; margin: auto; padding: 20px 30px;
-            border: 1px solid #888; width: 80%; max-width: 450px;
-            border-radius: 10px; position: relative; text-align: right; animation: fadeIn 0.3s;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .close-button {
-            color: #aaa; position: absolute; left: 15px; top: 10px;
-            font-size: 28px; font-weight: bold; cursor: pointer;
-        }
-        .close-button:hover, .close-button:focus { color: black; text-decoration: none; }
-        .modal-content h2 { margin-top: 0; color: var(--secondary-color); }
-        .modal-content p {
-            line-height: 1.6;
-            font-size: 1em;
-        }
-        .modal-content p strong { color: var(--primary-color); }
 
         .site-footer { 
             margin-top: auto; 
@@ -246,128 +255,115 @@
                 margin-bottom: 30px;
             }
             .controls-layout { flex-direction: column; }
-            #controlsContainerSingle, #controlsContainerBatch { flex-direction: column; gap: 15px; }
+            #controlsContainerSingle { flex-direction: column; gap: 15px; }
         }
-
-        /* --- START: Custom Select Arrow Styling --- */
-        .custom-select-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .custom-select-wrapper select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            padding-left: 35px; /* Space for the custom arrow */
-            background-color: #fff;
-            cursor: pointer;
-        }
-        .custom-select-wrapper::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
-            width: 10px;
-            height: 10px;
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%2334495e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            pointer-events: none;
-            transition: transform 0.2s ease;
-        }
-        /* --- END: Custom Select Arrow Styling --- */
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>محول الصور السريع</h1>
+        <h1>محرر الصور السريع</h1>
 
         <label for="fileInput" id="uploadArea">
             <p class="primary-text">اضغط هنا لرفع الصور</p>
             <p class="secondary-text">أو قم بسحب وإفلات الملفات في هذه المنطقة</p>
             <span class="upload-button">اختيار ملفات</span>
         </label>
-        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/bmp, .heic, image/heic" multiple>
+        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/bmp, .heic, image/heic">
 
         <div id="imageEditor">
-            <!-- === SINGLE FILE EDITOR VIEW === -->
             <div id="singleEditorView">
-                <div id="previewContainer">
-                    <img id="previewImage" src="" alt="معاينة الصورة">
-                    <button id="infoButton" title="معلومات الصورة">i</button>
-                </div>
-                <div id="controlsContainerSingle" class="controls-layout">
-                     <div class="control-group">
-                        <h3>تغيير الأبعاد</h3>
-                        <div class="control-row">
-                            <label for="percentSlider">النسبة:</label>
-                            <input type="range" id="percentSlider" min="1" max="400" value="100" style="width: 100%;">
-                            <span id="percentValue">100%</span>
-                            <input type="number" id="percentInput" value="100" min="1" max="400" class="hidden">
-                        </div>
-                        <div class="control-row">
-                            <label>الأبعاد:</label>
-                            <div class="dimensions-inputs">
-                                <input type="number" id="widthInput" min="1" placeholder="العرض">
-                                <button id="aspectLock" class="active" title="قفل نسبة العرض إلى الارتفاع">🔒</button>
-                                <input type="number" id="heightInput" min="1" placeholder="الارتفاع">
-                            </div>
-                        </div>
-                         <div class="info-row">الأبعاد الأصلية: <span id="originalDimensions"></span></div>
-                        <div class="info-row">الأبعاد الجديدة: <span id="newDimensions"></span></div>
+                
+                <div id="cropperView" class="hidden">
+                    <div id="cropperContainer">
+                        <img id="cropperImage">
                     </div>
-                    <div class="control-group">
-                        <h3>الصيغة والجودة</h3>
-                        <div class="control-row custom-select-wrapper">
-                            <label for="formatSelect">تحويل إلى:</label>
-                            <select id="formatSelect">
-                                <option value="jpeg">JPEG</option>
-                                <option value="webp">WEBP</option>
-                                <option value="png">PNG</option>
-                            </select>
-                        </div>
-                        <div id="qualityControl">
-                            <div class="control-row">
-                                <label for="qualitySlider">الجودة:</label>
-                                <input type="range" id="qualitySlider" min="1" max="100" value="90" style="width: 100%;">
-                                <span id="qualityValue">90%</span>
-                                <input type="number" id="qualityInput" value="90" min="1" max="100" class="hidden">
-                            </div>
-                        </div>
+                    <div id="cropActions">
+                        <button id="confirmCropBtn" class="action-btn primary">تأكيد القص</button>
+                        <button id="cancelCropBtn" class="action-btn secondary">إلغاء</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- === BATCH (MULTI-FILE) EDITOR VIEW === -->
-            <div id="batchEditorView">
-                <div id="fileListContainer"></div>
-                <div id="controlsContainerBatch" class="controls-layout">
-                    <!-- Controls are cloned from the single view by JS -->
+                <div id="editorView">
+                    <div id="previewContainer">
+                        <img id="previewImage" src="">
+                    </div>
+
+                    <div id="controlsContainerSingle" class="controls-layout">
+                        <div class="control-group">
+                            <h3>تحرير أساسي</h3>
+                            <div class="control-row">
+                                <div class="transform-buttons" style="width: 100%;">
+                                    <button class="transform-btn" id="rotate-left" title="تدوير لليسار">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/></svg>
+                                    </button>
+                                    <button class="transform-btn" id="rotate-right" title="تدوير لليمين">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                                    </button>
+                                    <button class="transform-btn" id="flip-h" title="قلب أفقي">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12l-4-4v3H7v-3l-4 4 4 4v-3h10v3z"/></svg>
+                                    </button>
+                                    <button class="transform-btn" id="flip-v" title="قلب عمودي">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21l-4-4h3V7H8l4-4 4 4h-3v10h3l-4 4z"/></svg>
+                                    </button>
+                                    <button class="transform-btn" id="crop-mode-btn" title="قص الصورة">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                         <div class="control-group">
+                            <h3>تغيير الأبعاد</h3>
+                            <div class="control-row">
+                                <label for="percentSlider">النسبة:</label>
+                                <input type="range" id="percentSlider" min="1" max="400" value="100" style="width: 100%;">
+                                <span id="percentValue">100%</span>
+                            </div>
+                            <div class="control-row">
+                                <label>الأبعاد:</label>
+                                <div class="dimensions-inputs">
+                                    <input type="number" id="widthInput" min="1" placeholder="العرض">
+                                    <button id="aspectLock" title="قفل نسبة العرض إلى الارتفاع">
+                                        <svg class="lock-icon-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
+                                        <svg class="lock-icon-open" style="display:none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
+                                    </button>
+                                    <input type="number" id="heightInput" min="1" placeholder="الارتفاع">
+                                </div>
+                            </div>
+                             <div class="info-row">الأبعاد الأصلية: <span id="originalDimensions"></span></div>
+                            <div class="info-row">الأبعاد الجديدة: <span id="newDimensions"></span></div>
+                        </div>
+                        <div class="control-group">
+                            <h3>الصيغة والجودة</h3>
+                            <div class="control-row">
+                                <label for="formatSelect">تحويل إلى:</label>
+                                <select id="formatSelect" class="custom-select-wrapper">
+                                    <option value="jpeg">JPEG</option>
+                                    <option value="webp">WEBP</option>
+                                    <option value="png">PNG</option>
+                                </select>
+                            </div>
+                            <div id="qualityControl">
+                                <div class="control-row">
+                                    <label for="qualitySlider">الجودة:</label>
+                                    <input type="range" id="qualitySlider" min="1" max="100" value="90" style="width: 100%;">
+                                    <span id="qualityValue">90%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="actionsContainer">
+                        <button id="downloadButton" class="action-btn primary">
+                            <span class="spinner"></span><span class="btn-text">تحويل وتنزيل</span>
+                        </button>
+                        <button id="resetButton" class="action-btn secondary">
+                            <span class="btn-text">إلغاء</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-            <div id="actionsContainer">
-                <button id="downloadButton" class="action-btn primary">
-                    <span class="spinner"></span><span class="btn-text">تحويل وتنزيل</span>
-                </button>
-                <button id="resetButton" class="action-btn secondary">
-                    <span class="btn-text">إلغاء</span>
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="infoModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2>معلومات الصورة</h2>
-            <p><strong>اسم الملف:</strong> <span id="infoFilename"></span></p>
-            <p><strong>الأبعاد الأصلية:</strong> <span id="infoDimensions"></span></p>
-            <p><strong>نوع الملف:</strong> <span id="infoType"></span></p>
-            <p><strong>حجم الملف:</strong> <span id="infoSize"></span></p>
         </div>
     </div>
 
@@ -383,15 +379,17 @@
         const fileInput = document.getElementById('fileInput');
         const imageEditor = document.getElementById('imageEditor');
         const singleEditorView = document.getElementById('singleEditorView');
-        const batchEditorView = document.getElementById('batchEditorView');
-        const previewContainer = document.getElementById('previewContainer');
+        
+        const editorView = document.getElementById('editorView');
+        const cropperView = document.getElementById('cropperView');
+        const cropperImage = document.getElementById('cropperImage');
+        const cropModeBtn = document.getElementById('crop-mode-btn');
+        const confirmCropBtn = document.getElementById('confirmCropBtn');
+        const cancelCropBtn = document.getElementById('cancelCropBtn');
+
         const previewImage = document.getElementById('previewImage');
-        const controlsContainerSingle = document.getElementById('controlsContainerSingle');
-        const fileListContainer = document.getElementById('fileListContainer');
-        const controlsContainerBatch = document.getElementById('controlsContainerBatch');
         const percentSlider = document.getElementById('percentSlider');
         const percentValue = document.getElementById('percentValue');
-        const percentInput = document.getElementById('percentInput');
         const widthInput = document.getElementById('widthInput');
         const heightInput = document.getElementById('heightInput');
         const aspectLock = document.getElementById('aspectLock');
@@ -401,55 +399,27 @@
         const qualityControl = document.getElementById('qualityControl');
         const qualitySlider = document.getElementById('qualitySlider');
         const qualityValue = document.getElementById('qualityValue');
-        const qualityInput = document.getElementById('qualityInput');
+        const actionsContainer = document.getElementById('actionsContainer');
         const downloadButton = document.getElementById('downloadButton');
         const resetButton = document.getElementById('resetButton');
-        const infoButton = document.getElementById('infoButton');
-        const infoModal = document.getElementById('infoModal');
-        const closeButton = document.querySelector('.close-button');
-        const infoFilename = document.getElementById('infoFilename');
-        const infoDimensions = document.getElementById('infoDimensions');
-        const infoType = document.getElementById('infoType');
-        const infoSize = document.getElementById('infoSize');
+        const rotateLeftBtn = document.getElementById('rotate-left');
+        const rotateRightBtn = document.getElementById('rotate-right');
+        const flipHBtn = document.getElementById('flip-h');
+        const flipVBtn = document.getElementById('flip-v');
 
         // --- App State ---
-        let currentMode = null;
         let singleFileData = {};
-        let batchFilesData = [];
+        let cropper = null;
+        let rotation = 0;
+        let scaleH = 1;
+        let scaleV = 1;
         
-        // --- CONSTANTS ---
-        const MEMORY_LIMIT_BYTES = 256 * 1024 * 1024; // 256 MB
-
-        // --- CLONE CONTROLS FOR BATCH MODE ---
-        const batchControlsContent = controlsContainerSingle.cloneNode(true);
-        batchControlsContent.querySelector('.dimensions-inputs').parentElement.remove();
-        batchControlsContent.querySelectorAll('.info-row').forEach(el => el.remove());
-        controlsContainerBatch.appendChild(batchControlsContent);
-        
-        const batchPercentSlider = controlsContainerBatch.querySelector('#percentSlider');
-        const batchPercentValue = controlsContainerBatch.querySelector('#percentValue');
-        const batchPercentInput = controlsContainerBatch.querySelector('#percentInput');
-        const batchFormatSelect = controlsContainerBatch.querySelector('#formatSelect');
-        const batchQualityControl = controlsContainerBatch.querySelector('#qualityControl');
-        const batchQualitySlider = controlsContainerBatch.querySelector('#qualitySlider');
-        const batchQualityValue = controlsContainerBatch.querySelector('#qualityValue');
-        const batchQualityInput = controlsContainerBatch.querySelector('#qualityInput');
-
-        // --- Generic Functions ---
+        const MEMORY_LIMIT_BYTES = 256 * 1024 * 1024;
         const showToast = (message) => alert(message);
-        const formatBytes = (bytes, decimals = 2) => {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-        };
-
-        // --- File Handling & Mode Switching ---
+        
+        // --- File Handling ---
         const handleFileDrop = (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('dragging'); handleFiles(e.dataTransfer.files); };
         const handleFileInputChange = (e) => handleFiles(e.target.files);
-        
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
         ['dragenter', 'dragover'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.add('dragging')));
         ['dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.remove('dragging')));
@@ -457,361 +427,362 @@
         fileInput.addEventListener('change', handleFileInputChange);
 
         function handleFiles(files) {
-            if (!files.length) return;
-            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.toLowerCase().endsWith('.heic'));
-            if (!imageFiles.length) { showToast('لم يتم اختيار ملفات صور صالحة.'); return; }
+            if (!files.length || files.length > 1) {
+                showToast('يرجى رفع صورة واحدة فقط.');
+                return;
+            }
             
+            const file = files[0];
+            if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.heic')) {
+                showToast('يرجى اختيار ملف صورة صالح.');
+                return;
+            }
+
             pageTitle.style.display = 'none';
             uploadArea.style.display = 'none';
             imageEditor.style.display = 'block';
-
-            if (imageFiles.length === 1) {
-                currentMode = 'single';
-                setupSingleFileEditor(imageFiles[0]);
-            } else {
-                currentMode = 'batch';
-                setupBatchEditor(imageFiles);
-            }
+            setupSingleFileEditor(file);
         }
         
         function setupSingleFileEditor(file) {
-            batchEditorView.style.display = 'none';
             singleEditorView.style.display = 'block';
-            downloadButton.querySelector('.btn-text').textContent = 'تحويل وتنزيل';
-            resetButton.querySelector('.btn-text').textContent = 'رفع صورة جديدة';
 
             const process = (dataUrl) => {
                 const img = new Image();
-                img.onload = () => {
-                    singleFileData.originalImage = img;
-                    singleFileData.originalWidth = img.width;
-                    singleFileData.originalHeight = img.height;
-                    singleFileData.aspectRatio = img.width / img.height;
-                    resetSingleControls();
-                    previewImage.src = dataUrl;
-                };
-                img.onerror = () => {
-                     showToast('فشل تحميل الصورة، قد يكون الملف تالفًا.');
-                     resetApp();
-                }
+                img.onload = () => updateEditorWithNewImage(img);
                 img.src = dataUrl;
             };
 
-            singleFileData = { name: file.name, type: file.type, size: file.size };
+            singleFileData.name = file.name;
+            singleFileData.type = file.type || 'image/jpeg';
 
             if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
                 showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
                 heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 })
-                    .then(res => {
+                    .then(res => new Promise(resolve => {
                         const reader = new FileReader();
-                        reader.onload = e => process(e.target.result);
+                        reader.onload = e => resolve(e.target.result);
                         reader.readAsDataURL(res);
-                    }).catch(err => { console.error(err); showToast('فشل تحويل HEIC.'); resetApp(); });
+                    }))
+                    .then(process)
+                    .catch(err => { console.error(err); showToast('فشل تحويل HEIC.'); resetApp(); });
             } else {
                 const reader = new FileReader();
                 reader.onload = e => process(e.target.result);
                 reader.readAsDataURL(file);
             }
         }
+        
+        function updateEditorWithNewImage(image) {
+            singleFileData.originalImage = image;
+            singleFileData.originalWidth = image.width;
+            singleFileData.originalHeight = image.height;
+            singleFileData.aspectRatio = image.width / image.height;
+            previewImage.src = image.src;
+            resetSingleControls();
+        }
 
         function resetSingleControls() {
             const { originalWidth, originalHeight } = singleFileData;
             percentSlider.value = 100;
-            percentValue.textContent = '100%';
-            widthInput.value = originalWidth;
-            heightInput.value = originalHeight;
-            singleFileData.currentWidth = originalWidth;
-            singleFileData.currentHeight = originalHeight;
-            
+            widthInput.value = originalWidth; heightInput.value = originalHeight;
+            singleFileData.currentWidth = originalWidth; singleFileData.currentHeight = originalHeight;
             originalDimensions.textContent = `${originalWidth}x${originalHeight}`;
             updateNewDimensionsDisplay();
-            
             singleFileData.isRatioLocked = true;
-            aspectLock.classList.add('active');
-            aspectLock.textContent = '🔒';
-            
+            aspectLock.querySelector('.lock-icon-closed').style.display = 'block';
+            aspectLock.querySelector('.lock-icon-open').style.display = 'none';
+            aspectLock.title = 'قفل نسبة العرض إلى الارتفاع';
             formatSelect.value = 'jpeg';
             toggleQualityControl(formatSelect, qualityControl);
+            rotation = 0; scaleH = 1; scaleV = 1;
+            updatePreviewTransform();
+            percentSlider.dispatchEvent(new Event('input'));
+            qualitySlider.dispatchEvent(new Event('input'));
         }
-
-        function updateNewDimensionsDisplay() {
-            newDimensions.textContent = `${singleFileData.currentWidth}x${singleFileData.currentHeight}`;
-        }
-
-        widthInput.addEventListener('input', () => {
-            let newWidth = parseInt(widthInput.value) || 0;
-            if (newWidth <= 0) return;
-            singleFileData.currentWidth = newWidth;
-            if (singleFileData.isRatioLocked) {
-                singleFileData.currentHeight = Math.round(newWidth / singleFileData.aspectRatio);
-                heightInput.value = singleFileData.currentHeight;
-            } else {
-                singleFileData.currentHeight = parseInt(heightInput.value) || singleFileData.currentHeight;
-            }
-            updateSliderFromDimensions();
-            updateNewDimensionsDisplay();
-        });
+        
+        // --- CROP MODE ---
+        cropModeBtn.addEventListener('click', () => {
+            editorView.classList.add('hidden');
+            cropperView.classList.remove('hidden');
             
-        heightInput.addEventListener('input', () => {
-            let newHeight = parseInt(heightInput.value) || 0;
-            if (newHeight <= 0) return;
-            singleFileData.currentHeight = newHeight;
-            if (singleFileData.isRatioLocked) {
-                singleFileData.currentWidth = Math.round(newHeight * singleFileData.aspectRatio);
-                widthInput.value = singleFileData.currentWidth;
+            cropperImage.src = singleFileData.originalImage.src;
+            if(cropper) cropper.destroy();
+            cropper = new Cropper(cropperImage, {
+                viewMode: 1, background: false, autoCropArea: 0.9, responsive: true
+            });
+        });
+
+        function exitCropMode() {
+            if(cropper) cropper.destroy(); cropper = null;
+            editorView.classList.remove('hidden');
+            cropperView.classList.add('hidden');
+        }
+        cancelCropBtn.addEventListener('click', exitCropMode);
+
+        confirmCropBtn.addEventListener('click', () => {
+            if (!cropper) return;
+            const croppedCanvas = cropper.getCroppedCanvas({
+                imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
+            });
+            if (!croppedCanvas) { showToast('فشل قص الصورة.'); return; }
+
+            const dataUrl = croppedCanvas.toDataURL(singleFileData.type);
+            const img = new Image();
+            img.onload = () => {
+                updateEditorWithNewImage(img);
+                exitCropMode();
+            };
+            img.src = dataUrl;
+        });
+
+        // --- Other Controls ---
+        function updateNewDimensionsDisplay() {
+            const isSideways = rotation % 180 !== 0;
+            const w = isSideways ? singleFileData.currentHeight : singleFileData.currentWidth;
+            const h = isSideways ? singleFileData.currentWidth : singleFileData.currentHeight;
+            newDimensions.textContent = `${w}x${h}`;
+        }
+        
+        function updatePreviewTransform() {
+            previewImage.style.transform = `rotate(${rotation}deg) scale(${scaleH}, ${scaleV})`;
+            updateNewDimensionsDisplay();
+        }
+
+        rotateLeftBtn.addEventListener('click', () => { rotation -= 90; updatePreviewTransform(); });
+        rotateRightBtn.addEventListener('click', () => { rotation += 90; updatePreviewTransform(); });
+        flipHBtn.addEventListener('click', () => { scaleH *= -1; updatePreviewTransform(); });
+        flipVBtn.addEventListener('click', () => { scaleV *= -1; updatePreviewTransform(); });
+        
+        function updateDimensionsFromInput(source) {
+            let value = parseInt(source.value) || 0; if (value <= 0) return;
+            const isSideways = rotation % 180 !== 0;
+            const isWidthInput = source.id === 'widthInput';
+
+            if ( (isWidthInput && !isSideways) || (!isWidthInput && isSideways) ) {
+                singleFileData.currentWidth = value;
+                if (singleFileData.isRatioLocked) {
+                    singleFileData.currentHeight = Math.round(value / singleFileData.aspectRatio);
+                    heightInput.value = isSideways ? singleFileData.currentWidth : singleFileData.currentHeight;
+                }
             } else {
-                singleFileData.currentWidth = parseInt(widthInput.value) || singleFileData.currentWidth;
+                 singleFileData.currentHeight = value;
+                if (singleFileData.isRatioLocked) {
+                    singleFileData.currentWidth = Math.round(value * singleFileData.aspectRatio);
+                    widthInput.value = isSideways ? singleFileData.currentHeight : singleFileData.currentWidth;
+                }
             }
             updateSliderFromDimensions();
             updateNewDimensionsDisplay();
-        });
+        }
+        widthInput.addEventListener('input', () => updateDimensionsFromInput(widthInput));
+        heightInput.addEventListener('input', () => updateDimensionsFromInput(heightInput));
         
         function updateSliderFromDimensions() {
-            const percent = Math.round((singleFileData.currentWidth / singleFileData.originalWidth) * 100);
-            const clamped = Math.min(Math.max(percent, 1), 400);
-            percentSlider.value = clamped;
-            percentValue.textContent = `${clamped}%`;
-        }
-
-        aspectLock.addEventListener('click', () => {
-            singleFileData.isRatioLocked = !singleFileData.isRatioLocked;
-            aspectLock.classList.toggle('active', singleFileData.isRatioLocked);
-            aspectLock.textContent = singleFileData.isRatioLocked ? '🔒' : '🔓';
-            if(singleFileData.isRatioLocked) { widthInput.dispatchEvent(new Event('input')); }
-        });
-
-
-        async function setupBatchEditor(files) {
-            singleEditorView.style.display = 'none';
-            batchEditorView.style.display = 'block';
-            downloadButton.querySelector('.btn-text').textContent = `تحويل وتنزيل (${files.length}) ملفات`;
-            resetButton.querySelector('.btn-text').textContent = 'مسح الكل';
-            fileListContainer.innerHTML = '<h4>جاري تحميل الصور...</h4>';
+             const isSideways = rotation % 180 !== 0;
+             const sliderBasedOn = isSideways ? singleFileData.currentHeight : singleFileData.currentWidth;
+             const originalBasedOn = isSideways ? singleFileData.originalHeight : singleFileData.originalWidth;
+            const percent = Math.round((sliderBasedOn / originalBasedOn) * 100);
+            percentSlider.value = Math.min(Math.max(percent, 1), 400);
             
-            const filePromises = files.map(file => new Promise((resolve, reject) => {
-                const process = (dataUrl) => {
-                    const img = new Image();
-                    img.onload = () => resolve({ name: file.name, dataUrl, imageElement: img });
-                    img.onerror = reject;
-                    img.src = dataUrl;
-                };
-                 if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
-                    heic2any({ blob: file, toType: "image/jpeg" })
-                        .then(res => {
-                            const reader = new FileReader();
-                            reader.onload = e => process(e.target.result);
-                            reader.readAsDataURL(res);
-                        }).catch(reject);
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = e => process(e.target.result);
-                    reader.readAsDataURL(file);
-                }
-            }));
-
-            try {
-                batchFilesData = await Promise.all(filePromises);
-                renderFileList();
-            } catch (err) {
-                console.error("Error processing files:", err);
-                showToast('حدث خطأ أثناء معالجة بعض الملفات.');
-                resetApp();
+            percentValue.textContent = `${percentSlider.value}%`;
+            if (percentSlider.value > 100) {
+                percentValue.style.color = 'var(--primary-color)';
+                percentValue.title = 'تكبير الصورة قد يؤثر على جودتها';
+            } else {
+                percentValue.style.color = 'inherit';
+                percentValue.title = '';
             }
         }
         
-        function renderFileList() {
-            fileListContainer.innerHTML = '';
-            batchFilesData.forEach(file => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `<img src="${file.dataUrl}" alt="${file.name}"><p class="file-item-name">${file.name}</p>`;
-                fileListContainer.appendChild(item);
-            });
-        }
-        
-        const initSharedControls = (slider, val, input) => {
-            slider.addEventListener('input', () => val.textContent = `${slider.value}%`);
-            val.addEventListener('click', () => {
-                val.classList.add('hidden'); input.classList.remove('hidden');
-                input.value = slider.value; input.focus(); input.select();
-            });
-            const updateFromInput = () => {
-                val.classList.remove('hidden'); input.classList.add('hidden');
-                let p = parseInt(input.value, 10);
-                if (isNaN(p) || p < parseInt(slider.min, 10)) p = parseInt(slider.min, 10);
-                if (p > parseInt(slider.max, 10)) p = parseInt(slider.max, 10);
-                slider.value = p; slider.dispatchEvent(new Event('input'));
-            };
-            input.addEventListener('blur', updateFromInput);
-            input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
-        };
+        percentSlider.addEventListener('input', () => { 
+            const percent = percentSlider.value;
+            percentValue.textContent = `${percent}%`;
+
+            if (percent > 100) {
+                percentValue.style.color = 'var(--primary-color)';
+                percentValue.title = 'تكبير الصورة قد يؤثر على جودتها';
+            } else {
+                percentValue.style.color = 'inherit';
+                percentValue.title = '';
+            }
+
+            const isSideways = rotation % 180 !== 0;
+            const newWidth = Math.round((singleFileData.originalWidth * percent) / 100);
+            const newHeight = Math.round((singleFileData.originalHeight * percent) / 100);
+            singleFileData.currentWidth = newWidth;
+            singleFileData.currentHeight = newHeight;
+            widthInput.value = isSideways ? newHeight : newWidth;
+            heightInput.value = isSideways ? newWidth : newHeight;
+            updateNewDimensionsDisplay();
+        });
+
+        aspectLock.addEventListener('click', () => {
+            const lockIconClosed = aspectLock.querySelector('.lock-icon-closed');
+            const lockIconOpen = aspectLock.querySelector('.lock-icon-open');
+
+            singleFileData.isRatioLocked = !singleFileData.isRatioLocked;
+
+            if (singleFileData.isRatioLocked) {
+                lockIconClosed.style.display = 'block';
+                lockIconOpen.style.display = 'none';
+                aspectLock.title = 'قفل نسبة العرض إلى الارتفاع';
+            } else {
+                lockIconClosed.style.display = 'none';
+                lockIconOpen.style.display = 'block';
+                aspectLock.title = 'فتح نسبة العرض إلى الارتفاع';
+            }
+
+            if (singleFileData.isRatioLocked) {
+                widthInput.dispatchEvent(new Event('input'));
+            }
+        });
         
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
             qualityEl.classList.toggle('hidden', !isLossy);
         };
-
-        initSharedControls(percentSlider, percentValue, percentInput);
-        initSharedControls(qualitySlider, qualityValue, qualityInput);
-        initSharedControls(batchPercentSlider, batchPercentValue, batchPercentInput);
-        initSharedControls(batchQualitySlider, batchQualityValue, batchQualityInput);
-
         formatSelect.addEventListener('change', () => toggleQualityControl(formatSelect, qualityControl));
-        batchFormatSelect.addEventListener('change', () => toggleQualityControl(batchFormatSelect, batchQualityControl));
-        
-        percentSlider.addEventListener('input', () => { 
-            const percent = percentSlider.value;
-            singleFileData.currentWidth = Math.round((singleFileData.originalWidth * percent) / 100);
-            singleFileData.currentHeight = Math.round((singleFileData.originalHeight * percent) / 100);
-            widthInput.value = singleFileData.currentWidth;
-            heightInput.value = singleFileData.currentHeight;
-            updateNewDimensionsDisplay();
+
+        qualitySlider.addEventListener('input', () => {
+            qualityValue.textContent = `${qualitySlider.value}%`;
         });
 
-        infoButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const { name, originalWidth, originalHeight, type, size } = singleFileData;
-            infoFilename.textContent = name;
-            infoDimensions.textContent = `${originalWidth}x${originalHeight}`;
-            infoType.textContent = type;
-            infoSize.textContent = formatBytes(size);
-            infoModal.style.display = 'flex';
-        });
-        previewContainer.addEventListener('click', () => infoButton.classList.add('visible'));
-        closeButton.addEventListener('click', () => infoModal.style.display = 'none');
-        window.addEventListener('click', (e) => {
-            if (e.target === infoModal) infoModal.style.display = 'none';
-            if (!previewContainer.contains(e.target)) infoButton.classList.remove('visible');
-        });
+        function makeEditableOnClick(spanElement, sliderElement, options) {
+            const { min, max } = options;
+            
+            spanElement.addEventListener('click', function onSpanClick() {
+                if (document.querySelector('.editable-input')) return;
 
-        downloadButton.addEventListener('click', () => {
-            if (currentMode === 'single') downloadSingleFile();
-            if (currentMode === 'batch') downloadBatchFiles();
-        });
-        
-        function triggerDownload(dataUrl, fileName) {
-            const link = document.createElement('a');
-            link.download = fileName;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            if (dataUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(dataUrl);
-            }
+                const originalValue = parseInt(spanElement.textContent, 10);
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'editable-input';
+                input.min = min;
+                input.max = max;
+                input.value = originalValue;
+                input.style.width = '60px';
+                input.style.textAlign = 'center';
+                input.style.border = '1px solid var(--primary-color)';
+                input.style.outline = 'none';
+                input.style.borderRadius = '4px';
+                input.style.fontWeight = '700';
+
+                function finalize() {
+                    let newValue = parseInt(input.value, 10);
+                    if (isNaN(newValue)) {
+                        newValue = originalValue;
+                    }
+                    newValue = Math.max(min, Math.min(newValue, max));
+                    
+                    sliderElement.value = newValue;
+                    sliderElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    input.replaceWith(spanElement);
+                }
+
+                input.addEventListener('blur', finalize);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        finalize();
+                    } else if (e.key === 'Escape') {
+                        input.replaceWith(spanElement);
+                        spanElement.textContent = `${originalValue}%`;
+                    }
+                });
+
+                spanElement.replaceWith(input);
+                input.focus();
+                input.select();
+            });
         }
+
+        makeEditableOnClick(percentValue, percentSlider, { min: 1, max: 400 });
+        makeEditableOnClick(qualityValue, qualitySlider, { min: 1, max: 100 });
         
-        async function processImage(image, newWidth, newHeight, format, quality) {
-            if (newWidth <= 0 || newHeight <= 0) return null;
-            const estimatedMemory = newWidth * newHeight * 4;
-            if (estimatedMemory > MEMORY_LIMIT_BYTES) {
-                console.warn(`Skipping image due to large dimensions: ${newWidth}x${newHeight}`);
-                return null;
-            }
+        // --- Download Logic ---
+        async function processImage(image, newWidth, newHeight, format, quality, transform) {
+            const isSideways = transform.rotation % 180 !== 0;
+            const finalWidth = isSideways ? newHeight : newWidth;
+            const finalHeight = isSideways ? newWidth : newHeight;
+            if (finalWidth <= 0 || finalHeight <= 0) return null;
+            if (finalWidth * finalHeight * 4 > MEMORY_LIMIT_BYTES) return null;
 
             const canvas = document.createElement('canvas');
-            canvas.width = newWidth;
-            canvas.height = newHeight;
+            canvas.width = finalWidth;
+            canvas.height = finalHeight;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(transform.rotation * Math.PI / 180);
+            ctx.scale(transform.scaleH, transform.scaleV);
+            ctx.drawImage(image, -newWidth / 2, -newHeight / 2, newWidth, newHeight);
+            ctx.restore();
             
-            const mimeType = `image/${format}`;
-            try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
-                if (!blob) throw new Error("Canvas toBlob failed");
-                return blob;
-            } catch (e) {
-                console.error(`Failed to process image as ${mimeType}:`, e);
-                return null;
-            }
+            return await new Promise(resolve => canvas.toBlob(resolve, `image/${format}`, quality));
         }
 
         async function downloadSingleFile() {
-            const { originalImage, currentWidth, currentHeight, name } = singleFileData;
-            if (!originalImage) return;
-            
+            if (!singleFileData.originalImage) return;
             setDownloadButtonLoading(true);
 
+            const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
             const quality = (format === 'jpeg' || format === 'webp') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
             
-            const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality);
+            const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality, { rotation, scaleH, scaleV });
 
             if (blob) {
+                const isSideways = rotation % 180 !== 0;
+                const finalW = isSideways ? currentHeight : currentWidth;
+                const finalH = isSideways ? currentWidth : currentHeight;
                 const baseFileName = name.split('.').slice(0, -1).join('.') || name;
-                const newFileName = `${baseFileName}_${currentWidth}x${currentHeight}.${format}`;
+                const newFileName = `${baseFileName}_${finalW}x${finalH}.${format}`;
                 triggerDownload(URL.createObjectURL(blob), newFileName);
             } else {
-                showToast(`فشل التحويل. قد تكون أبعاد الصورة كبيرة جدًا أو أن الصيغة غير مدعومة بشكل صحيح.`);
+                showToast(`فشل التحويل.`);
             }
-
             setDownloadButtonLoading(false);
         }
         
-        async function downloadBatchFiles() {
-            if (!batchFilesData.length) return;
-            setDownloadButtonLoading(true);
-
-            const zip = new JSZip();
-            const format = batchFormatSelect.value;
-            const percent = parseInt(batchPercentSlider.value, 10) / 100;
-            const quality = (format === 'jpeg' || format === 'webp') ? parseInt(batchQualitySlider.value, 10) / 100 : undefined;
-            
-            let skippedFiles = 0;
-
-            for (const fileData of batchFilesData) {
-                const img = fileData.imageElement;
-                const newWidth = Math.round(img.width * percent);
-                const newHeight = Math.round(img.height * percent);
-                
-                const blob = await processImage(img, newWidth, newHeight, format, quality);
-                
-                if (blob) {
-                    const baseFileName = fileData.name.split('.').slice(0, -1).join('.') || fileData.name;
-                    const newFileName = `${baseFileName}_${newWidth}x${newHeight}.${format}`;
-                    zip.file(newFileName, blob);
-                } else {
-                    skippedFiles++;
-                }
-            }
-
-            if (skippedFiles > 0) {
-                showToast(`تم تخطي ${skippedFiles} ملف بسبب حجمها الكبير أو حدوث خطأ في تحويلها.`);
-            }
-            
-            if (Object.keys(zip.files).length > 0) {
-                const zipContent = await zip.generateAsync({ type: "blob" });
-                triggerDownload(URL.createObjectURL(zipContent), `converted_images_${Date.now()}.zip`);
-            } else if (batchFilesData.length > 0) {
-                showToast("لم يتم تحويل أي ملفات بنجاح.");
-            }
-
-            setDownloadButtonLoading(false); 
-        }
-
         const setDownloadButtonLoading = (isLoading) => {
             downloadButton.classList.toggle('loading', isLoading);
-            downloadButton.disabled = isLoading;
             resetButton.disabled = isLoading;
         };
 
+        const triggerDownload = (url, name) => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         const resetApp = () => {
+            if(cropper) cropper.destroy(); cropper = null;
             imageEditor.style.display = 'none';
             singleEditorView.style.display = 'none';
-            batchEditorView.style.display = 'none';
+            editorView.classList.remove('hidden');
+            cropperView.classList.add('hidden');
             uploadArea.style.display = 'flex';
             pageTitle.style.display = 'block';
             fileInput.value = '';
-            infoButton.classList.remove('visible');
             singleFileData = {};
-            batchFilesData = [];
         };
-
+        
+        downloadButton.addEventListener('click', () => {
+            if (singleFileData.originalImage) downloadSingleFile();
+        });
         resetButton.addEventListener('click', resetApp);
     });
     </script>
+    
     <script>
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(registration => { console.log('SW registration successful:', registration.scope); }).catch(err => { console.log('SW registration failed:', err); }); }); }
   </script>
+  
 </body>
 </html>
