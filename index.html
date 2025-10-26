@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محول ومحرر الصور الذكي</title>
+    <title>محول الصور السريع</title>
     
     <!-- === PWA Additions === -->
-  <meta name="theme-color" content="#f4f7f9">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-1440.png">
-  <link rel="apple-touch-icon" href="icon-1440.png">
-    <!-- ====================== -->
+    <meta name="theme-color" content="#f4f7f9">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-1024.png">
+    <link rel="apple-touch-icon" href="icon-1440.png">
+    <!-- ============================= -->
+    
+    <!-- === Google Fonts (Cairo) === -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- ============================== -->
     
     <!-- Library to handle HEIC files -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -28,23 +34,38 @@
 
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
+        html {
+            height: 100%;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Cairo', sans-serif;
             background-color: var(--background-color); color: var(--text-color);
-            margin: 0; padding: 20px; direction: rtl;
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            margin: 0;
+            padding: 25px 25px 9px;
+            direction: rtl;
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            font-size: 16px;
+            align-items: center; /* توسيط الحاوية أفقيًا */
         }
         
         button, input, select { font-family: inherit; }
 
         .container {
-            width: 100%; max-width: 900px; background: var(--container-bg-color);
+            width: 98%; max-width: 900px; background: var(--container-bg-color);
             padding: 40px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.07);
             text-align: center;
+            /* === تم حذف الخصائص المسببة للمشكلة === */
+            margin-bottom: 40px;
         }
 
         h1 {
-            color: var(--text-color); margin: 0 0 30px 0; font-weight: bold; font-size: 2em;
+            color: var(--text-color); 
+            margin: 0 0 30px 0; 
+            font-weight: 700; 
+            font-size: 1.8em; 
         }
         h1 span { color: var(--primary-color); font-weight: 900; }
 
@@ -56,13 +77,14 @@
         #uploadArea.dragging, #uploadArea:hover {
             border-color: var(--primary-color); background-color: #fffaf5;
         }
-        #uploadArea .primary-text { font-size: 1.2em; font-weight: 600; margin: 0 0 10px 0; }
-        #uploadArea .secondary-text { font-size: 1em; color: #777; margin: 0 0 25px 0; }
+        #uploadArea .primary-text { font-size: 1.11em; font-weight: 600; margin: 0 0 10px 0; }
+        #uploadArea .secondary-text { font-size: 0.95em; color: #777; margin: 0 0 25px 0; }
         .upload-button {
             background-color: var(--primary-color); color: var(--text-light-color);
             height: 44px; line-height: 44px; padding: 0 35px; border-radius: 8px;
-            font-weight: bold; display: inline-block; transition: background-color 0.3s;
-            border: none; font-size: 1.1em;
+            font-weight: 700; display: inline-block; transition: background-color 0.3s;
+            border: none;
+            font-size: 1em;
         }
         #uploadArea:hover .upload-button { background-color: var(--primary-hover); }
         #fileInput { display: none; }
@@ -89,7 +111,8 @@
         }
         .file-item {
             background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
-            padding: 8px; text-align: center; font-size: 0.8em; overflow: hidden;
+            padding: 8px; text-align: center; overflow: hidden;
+            font-size: 0.85em;
         }
         .file-item img {
             width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 5px;
@@ -105,14 +128,17 @@
             border-radius: 8px; flex: 1; min-width: 280px;
         }
         .control-group h3 {
-            text-align: center; margin: 0 0 15px 0; font-size: 1.1em; font-weight: bold;
+            text-align: center; margin: 0 0 15px 0;
+            font-weight: 700;
             padding-bottom: 10px; color: var(--secondary-color);
+            font-size: 1.1em;
         }
         .control-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .control-row label { flex-basis: 70px; flex-shrink: 0; font-weight: bold; font-size: 0.9em; }
+        .control-row label { flex-basis: 70px; flex-shrink: 0; font-weight: 700; font-size: 1em; }
         .control-row input[type="number"], .control-row select {
-            width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border-color);
+            width: 100%; padding: 9px 10px; border-radius: 4px; border: 1px solid var(--border-color);
             outline: none; transition: border-color 0.3s, box-shadow 0.3s;
+            font-size: 1em;
         }
         .control-row input[type="number"]:focus, .control-row select:focus {
             border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color);
@@ -125,12 +151,13 @@
         #aspectLock.active { color: var(--primary-color); }
         #aspectLock:hover { color: var(--primary-hover); }
 
-        .info-row { font-size: 0.85em; color: #777; text-align: center; margin-top: 5px; }
+        .info-row { font-size: 0.9em; color: #777; text-align: center; margin-top: 5px; }
         #originalDimensions, #newDimensions { font-weight: bold; direction: ltr; display: inline-block; }
 
         #percentValue, #qualityValue {
             cursor: pointer; min-width: 60px; text-align: center; padding: 8px 0;
             border-radius: 4px; transition: background-color 0.2s;
+            font-size: 1em;
         }
         #percentValue:hover, #qualityValue:hover { background-color: #f0f0f0; }
         #percentInput, #qualityInput { width: 65px; text-align: center; -moz-appearance: textfield; }
@@ -142,9 +169,10 @@
         #actionsContainer { margin-top: 25px; display: flex; gap: 10px; }
         .action-btn {
             flex: 1; color: white; padding: 0; height: 44px; line-height: 44px;
-            border-radius: 8px; cursor: pointer; font-weight: bold; border: none;
+            border-radius: 8px; cursor: pointer; font-weight: 700; border: none;
             transition: background-color 0.3s, opacity 0.3s;
-            font-size: 1.1em; text-align: center; position: relative;
+            text-align: center; position: relative;
+            font-size: 1em;
         }
         .action-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; }
         .action-btn .spinner {
@@ -190,15 +218,33 @@
         }
         .close-button:hover, .close-button:focus { color: black; text-decoration: none; }
         .modal-content h2 { margin-top: 0; color: var(--secondary-color); }
-        .modal-content p { line-height: 1.6; font-size: 1.1em; }
+        .modal-content p {
+            line-height: 1.6;
+            font-size: 1em;
+        }
         .modal-content p strong { color: var(--primary-color); }
 
-        .site-footer { margin-top: auto; padding: 30px; color: #888; font-size: 0.9em; }
-        .site-footer a { color: var(--primary-color); text-decoration: none; font-weight: bold; }
+        .site-footer { 
+            margin-top: auto; 
+            padding-top: 0; 
+            text-align: center;
+            color: #888; 
+            font-size: 0.9em;
+            width: 100%;
+        }
+        .site-footer a { color: var(--primary-color); text-decoration: none; font-weight: bold; font-size: 1.1em; }
         .site-footer a:hover { text-decoration: underline; }
 
         @media (max-width: 768px) {
-            .container { padding: 20px; }
+            body { 
+                font-size: 15px; 
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .container { 
+                padding: 20px; 
+                margin-bottom: 30px;
+            }
             .controls-layout { flex-direction: column; }
             #controlsContainerSingle, #controlsContainerBatch { flex-direction: column; gap: 15px; }
         }
@@ -237,7 +283,7 @@
 <body>
 
     <div class="container">
-        <h1>محول <span>و</span>محرر الصور</h1>
+        <h1>محول الصور السريع</h1>
 
         <label for="fileInput" id="uploadArea">
             <p class="primary-text">اضغط هنا لرفع الصور</p>
@@ -275,13 +321,12 @@
                     </div>
                     <div class="control-group">
                         <h3>الصيغة والجودة</h3>
-                        <!-- MODIFIED: Added wrapper class -->
                         <div class="control-row custom-select-wrapper">
                             <label for="formatSelect">تحويل إلى:</label>
                             <select id="formatSelect">
                                 <option value="jpeg">JPEG</option>
-                                <option value="png">PNG</option>
                                 <option value="webp">WEBP</option>
+                                <option value="png">PNG</option>
                             </select>
                         </div>
                         <div id="qualityControl">
@@ -486,9 +531,7 @@
             aspectLock.textContent = '🔒';
             
             formatSelect.value = 'jpeg';
-            qualitySlider.value = 90;
-            qualityValue.textContent = '90%';
-            toggleQualitySlider(formatSelect, qualityControl);
+            toggleQualityControl(formatSelect, qualityControl);
         }
 
         function updateNewDimensionsDisplay() {
@@ -585,9 +628,8 @@
                 fileListContainer.appendChild(item);
             });
         }
-
-
-        const initSharedControls = (slider, val, input, format, qControl) => {
+        
+        const initSharedControls = (slider, val, input) => {
             slider.addEventListener('input', () => val.textContent = `${slider.value}%`);
             val.addEventListener('click', () => {
                 val.classList.add('hidden'); input.classList.remove('hidden');
@@ -596,23 +638,27 @@
             const updateFromInput = () => {
                 val.classList.remove('hidden'); input.classList.add('hidden');
                 let p = parseInt(input.value, 10);
-                if (isNaN(p) || p < 1) p = 1;
+                if (isNaN(p) || p < parseInt(slider.min, 10)) p = parseInt(slider.min, 10);
                 if (p > parseInt(slider.max, 10)) p = parseInt(slider.max, 10);
                 slider.value = p; slider.dispatchEvent(new Event('input'));
             };
             input.addEventListener('blur', updateFromInput);
             input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
-            
-            if (format) format.addEventListener('change', () => toggleQualitySlider(format, qControl));
         };
-
-        const toggleQualitySlider = (formatEl, qualityEl) => {
+        
+        const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
             qualityEl.classList.toggle('hidden', !isLossy);
         };
 
         initSharedControls(percentSlider, percentValue, percentInput);
-        initSharedControls(qualitySlider, qualityValue, qualityInput, formatSelect, qualityControl);
+        initSharedControls(qualitySlider, qualityValue, qualityInput);
+        initSharedControls(batchPercentSlider, batchPercentValue, batchPercentInput);
+        initSharedControls(batchQualitySlider, batchQualityValue, batchQualityInput);
+
+        formatSelect.addEventListener('change', () => toggleQualityControl(formatSelect, qualityControl));
+        batchFormatSelect.addEventListener('change', () => toggleQualityControl(batchFormatSelect, batchQualityControl));
+        
         percentSlider.addEventListener('input', () => { 
             const percent = percentSlider.value;
             singleFileData.currentWidth = Math.round((singleFileData.originalWidth * percent) / 100);
@@ -621,9 +667,6 @@
             heightInput.value = singleFileData.currentHeight;
             updateNewDimensionsDisplay();
         });
-
-        initSharedControls(batchPercentSlider, batchPercentValue, batchPercentInput);
-        initSharedControls(batchQualitySlider, batchQualityValue, batchQualityInput, batchFormatSelect, batchQualityControl);
 
         infoButton.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -641,14 +684,11 @@
             if (!previewContainer.contains(e.target)) infoButton.classList.remove('visible');
         });
 
-        // --- ACTIONS (Download / Reset) ---
         downloadButton.addEventListener('click', () => {
             if (currentMode === 'single') downloadSingleFile();
             if (currentMode === 'batch') downloadBatchFiles();
         });
         
-        // --- FINAL, ROBUST DOWNLOAD LOGIC ---
-
         function triggerDownload(dataUrl, fileName) {
             const link = document.createElement('a');
             link.download = fileName;
@@ -660,62 +700,52 @@
                 URL.revokeObjectURL(dataUrl);
             }
         }
+        
+        async function processImage(image, newWidth, newHeight, format, quality) {
+            if (newWidth <= 0 || newHeight <= 0) return null;
+            const estimatedMemory = newWidth * newHeight * 4;
+            if (estimatedMemory > MEMORY_LIMIT_BYTES) {
+                console.warn(`Skipping image due to large dimensions: ${newWidth}x${newHeight}`);
+                return null;
+            }
 
-        function getCanvasBlob(canvas, format, quality) {
-            return new Promise((resolve, reject) => {
-                try {
-                    const mimeType = `image/${format}`;
-                    switch(format) {
-                        case 'jpeg':
-                        case 'webp':
-                            canvas.toBlob(resolve, mimeType, quality);
-                            break;
-                        case 'png':
-                            canvas.toBlob(resolve, mimeType);
-                            break;
-                        default:
-                            reject(new Error('Format not supported: ' + format));
-                    }
-                } catch(e) {
-                    reject(e);
-                }
-            });
+            const canvas = document.createElement('canvas');
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            
+            const mimeType = `image/${format}`;
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
+                if (!blob) throw new Error("Canvas toBlob failed");
+                return blob;
+            } catch (e) {
+                console.error(`Failed to process image as ${mimeType}:`, e);
+                return null;
+            }
         }
 
         async function downloadSingleFile() {
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
-            if (!originalImage || currentWidth <= 0 || currentHeight <= 0) return;
+            if (!originalImage) return;
             
-            const estimatedMemory = currentWidth * currentHeight * 4;
-            if (estimatedMemory > MEMORY_LIMIT_BYTES) {
-                showToast(`فشل التحويل. أبعاد الصورة (${currentWidth}x${currentHeight}) كبيرة جدًا وتتطلب ذاكرة تفوق الحد المسموح به (${formatBytes(MEMORY_LIMIT_BYTES)}). يرجى تقليل الأبعاد والمحاولة مرة أخرى.`);
-                return;
-            }
-
             setDownloadButtonLoading(true);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = currentWidth;
-            canvas.height = currentHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(originalImage, 0, 0, currentWidth, currentHeight);
-            
             const format = formatSelect.value;
-            const quality = parseInt(qualitySlider.value) / 100;
-            const baseFileName = name.split('.').slice(0, -1).join('.') || name;
-            const newFileName = `${baseFileName}_${currentWidth}x${currentHeight}.${format}`;
+            const quality = (format === 'jpeg' || format === 'webp') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
+            
+            const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality);
 
-            try {
-                const blob = await getCanvasBlob(canvas, format, quality);
-                 if (!blob) throw new Error("فشل إنشاء الملف (blob).");
-                const objectUrl = URL.createObjectURL(blob);
-                triggerDownload(objectUrl, newFileName);
-            } catch (e) {
-                console.error("Download failed:", e);
-                showToast(`فشل التحويل: ${e.message}. قد يكون السبب هو ضغط الذاكرة في المتصفح.`);
-            } finally {
-                setDownloadButtonLoading(false);
+            if (blob) {
+                const baseFileName = name.split('.').slice(0, -1).join('.') || name;
+                const newFileName = `${baseFileName}_${currentWidth}x${currentHeight}.${format}`;
+                triggerDownload(URL.createObjectURL(blob), newFileName);
+            } else {
+                showToast(`فشل التحويل. قد تكون أبعاد الصورة كبيرة جدًا أو أن الصيغة غير مدعومة بشكل صحيح.`);
             }
+
+            setDownloadButtonLoading(false);
         }
         
         async function downloadBatchFiles() {
@@ -724,62 +754,39 @@
 
             const zip = new JSZip();
             const format = batchFormatSelect.value;
-            const quality = parseInt(batchQualitySlider.value, 10) / 100;
             const percent = parseInt(batchPercentSlider.value, 10) / 100;
+            const quality = (format === 'jpeg' || format === 'webp') ? parseInt(batchQualitySlider.value, 10) / 100 : undefined;
+            
             let skippedFiles = 0;
 
-            const processingPromises = batchFilesData.map(async (fileData) => {
+            for (const fileData of batchFilesData) {
                 const img = fileData.imageElement;
                 const newWidth = Math.round(img.width * percent);
                 const newHeight = Math.round(img.height * percent);
                 
-                const estimatedMemory = newWidth * newHeight * 4;
-                if (estimatedMemory > MEMORY_LIMIT_BYTES) {
-                    console.warn(`Skipping file ${fileData.name} due to large dimensions.`);
-                    skippedFiles++;
-                    return;
-                }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = newWidth > 0 ? newWidth : 1;
-                canvas.height = newHeight > 0 ? newHeight : 1;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                try {
-                    const blob = await getCanvasBlob(canvas, format, quality);
-                    if (!blob) throw new Error("Blob creation failed.");
+                const blob = await processImage(img, newWidth, newHeight, format, quality);
+                
+                if (blob) {
                     const baseFileName = fileData.name.split('.').slice(0, -1).join('.') || fileData.name;
                     const newFileName = `${baseFileName}_${newWidth}x${newHeight}.${format}`;
                     zip.file(newFileName, blob);
-                } catch(e) {
-                    console.error('Failed to process file:', fileData.name, e);
+                } else {
                     skippedFiles++;
                 }
-            });
-
-            try {
-                await Promise.all(processingPromises);
-
-                if (skippedFiles > 0) {
-                    showToast(`تم تخطي ${skippedFiles} ملف بسبب حجم أبعادها الكبير جدًا.`);
-                }
-                
-                const zipContent = await zip.generateAsync({ type: "blob" });
-                if (zipContent.size > 0) {
-                    triggerDownload(URL.createObjectURL(zipContent), `converted_images_${Date.now()}.zip`);
-                } else if (skippedFiles === batchFilesData.length) {
-                    showToast("لم يتم تحويل أي ملفات لأن جميعها كانت ذات أبعاد كبيرة جدًا.");
-                } else if (batchFilesData.length > 0 && skippedFiles < batchFilesData.length) {
-                     showToast("فشل إنشاء الملف المضغوط بالرغم من وجود ملفات صالحة.");
-                }
-
-            } catch (err) {
-                console.error("Error creating zip file:", err); 
-                showToast('حدث خطأ أثناء إنشاء الملف المضغوط.');
-            } finally { 
-                setDownloadButtonLoading(false); 
             }
+
+            if (skippedFiles > 0) {
+                showToast(`تم تخطي ${skippedFiles} ملف بسبب حجمها الكبير أو حدوث خطأ في تحويلها.`);
+            }
+            
+            if (Object.keys(zip.files).length > 0) {
+                const zipContent = await zip.generateAsync({ type: "blob" });
+                triggerDownload(URL.createObjectURL(zipContent), `converted_images_${Date.now()}.zip`);
+            } else if (batchFilesData.length > 0) {
+                showToast("لم يتم تحويل أي ملفات بنجاح.");
+            }
+
+            setDownloadButtonLoading(false); 
         }
 
         const setDownloadButtonLoading = (isLoading) => {
@@ -807,6 +814,4 @@
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(registration => { console.log('SW registration successful:', registration.scope); }).catch(err => { console.log('SW registration failed:', err); }); }); }
   </script>
 </body>
-
 </html>
-
