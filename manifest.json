@@ -1,0 +1,16 @@
+{
+    "name": "Image Converter",
+    "short_name": "Image Converter",
+    "description": "Convert images from one format to another easily.",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#f4f7f9",
+    "icons": [
+        {
+            "src": "icon-1024.png",
+            "sizes": "1024x1024",
+            "type": "image/png"
+        }
+    ]
+}
