@@ -1,7 +1,6 @@
 <div dir="rtl">
 
-# محرر الصور السريع &nbsp;&nbsp; 🖼️ &nbsp;&nbsp; Quick Image Editor
-
+# محرر الصور السريع
 [![version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/iofahmawi/image-converter)
 [![PWA](https://img.shields.io/badge/PWA-Enabled-brightgreen)](https://iofahmawi.github.io/image-converter/)
 
