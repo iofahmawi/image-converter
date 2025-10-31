@@ -3,7 +3,6 @@ const urlsToCache = [
   './',
   'index.html',
   'manifest.json',
-  'icon-1024.png',
   'icon-1440.png',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css',
