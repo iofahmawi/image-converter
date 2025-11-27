@@ -1,14 +1,12 @@
-const CACHE_NAME = 'quick-image-editor-cache-v1';
+// sw.js - Image Editor (Dynamic Version)
+
+const CACHE_NAME = 'image-editor-dynamic-v3';
+
+// نخزن فقط ملف الواجهة لضمان نجاح التثبيت السريع
 const urlsToCache = [
   './',
   'index.html',
-  'manifest.json',
-  'icon-1440.png',
-  'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js',
-  'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+  'manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -16,21 +14,20 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        return cache.addAll(urlsToCache)
-          .catch(err => {
-            console.error('Failed to cache one or more resources during install:', err);
-          });
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
       })
   );
 });
 
 self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
           }
         })
       );
@@ -41,8 +38,28 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
+      .then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return fetch(event.request).then(networkResponse => {
+          // التحقق من صحة الاستجابة
+          // ملاحظة: هنا نسمح بـ 'cors' لأنك تستخدم مكتبات خارجية (CDNs)
+          if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
+            return networkResponse;
+          }
+
+          // تخزين الملف (سواء كان صورة أو سكريبت خارجي)
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            if (event.request.method === 'GET' && !event.request.url.startsWith('chrome-extension')) {
+                cache.put(event.request, responseToCache);
+            }
+          });
+
+          return networkResponse;
+        });
       })
   );
 });
