@@ -389,11 +389,12 @@
                                 </div>
                             </div>
                             <div id="backgroundColorControl" class="hidden">
-                                <div class="control-row" style="flex-wrap: nowrap; align-items: stretch;">
+                                <div class="control-row" style="flex-wrap: nowrap; gap: 8px;">
                                     <label for="bgColorHex" style="white-space: nowrap; flex-basis: auto; flex-shrink: 0; display: flex; align-items: center;">لون الخلفية:</label>
-                                    <button type="button" class="bg-preset-btn" data-color="#ffffff" style="box-sizing: border-box; flex-shrink: 0; height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; color: #34495e; cursor: pointer; font-size: 0.85em;">أبيض</button>
-                                    <button type="button" class="bg-preset-btn" data-color="#000000" style="box-sizing: border-box; flex-shrink: 0; height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; color: #ffffff; cursor: pointer; font-size: 0.85em;">أسود</button>
-                                    <input type="text" id="bgColorHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" style="box-sizing: border-box; flex-shrink: 1; min-width: 0; width: 80px; height: 34px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.8em; text-align: center; text-transform: uppercase;">
+                                    <button type="button" class="bg-preset-btn" id="bgTransparentBtn" data-color="transparent" title="شفاف" aria-label="شفاف" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; cursor: pointer;"></button>
+                                    <button type="button" class="bg-preset-btn" data-color="#ffffff" title="أبيض" aria-label="أبيض" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; cursor: pointer;"></button>
+                                    <button type="button" class="bg-preset-btn" data-color="#000000" title="أسود" aria-label="أسود" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; cursor: pointer;"></button>
+                                    <input type="text" id="bgColorHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
                                 </div>
                             </div>
                         </div>
@@ -704,26 +705,38 @@
         
         const bgColorControl = document.getElementById('backgroundColorControl');
         const bgColorHex = document.getElementById('bgColorHex');
+        const bgTransparentBtn = document.getElementById('bgTransparentBtn');
         const bgPresetBtns = document.querySelectorAll('.bg-preset-btn');
         const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+        let bgTransparentSelected = true;
 
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
             qualityEl.classList.toggle('hidden', !isLossy);
-            bgColorControl.classList.toggle('hidden', formatEl.value !== 'jpeg');
+            bgColorControl.classList.remove('hidden');
+            const supportsTransparency = formatEl.value !== 'jpeg';
+            bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
+            if (!supportsTransparency && bgTransparentSelected) bgTransparentSelected = false;
+            updateBgPresetSelection();
         };
         formatSelect.addEventListener('change', () => toggleQualityControl(formatSelect, qualityControl));
 
         const updateBgPresetSelection = () => {
             const current = bgColorHex.value.trim().toUpperCase();
             bgPresetBtns.forEach(btn => {
-                btn.classList.toggle('selected', btn.dataset.color.toUpperCase() === current);
+                const isTransparentBtn = btn.dataset.color === 'transparent';
+                btn.classList.toggle('selected', isTransparentBtn ? bgTransparentSelected : (!bgTransparentSelected && btn.dataset.color.toUpperCase() === current));
             });
         };
 
         bgPresetBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                bgColorHex.value = btn.dataset.color.toUpperCase();
+                if (btn.dataset.color === 'transparent') {
+                    bgTransparentSelected = true;
+                } else {
+                    bgTransparentSelected = false;
+                    bgColorHex.value = btn.dataset.color.toUpperCase();
+                }
                 updateBgPresetSelection();
             });
         });
@@ -732,6 +745,7 @@
             let val = bgColorHex.value.trim();
             if (val && !val.startsWith('#')) val = `#${val}`;
             bgColorHex.value = HEX_COLOR_RE.test(val) ? val.toUpperCase() : '#FFFFFF';
+            bgTransparentSelected = false;
             updateBgPresetSelection();
         });
 
@@ -829,7 +843,7 @@
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
             const quality = (format === 'jpeg' || format === 'webp') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
-            const bgColor = format === 'jpeg' ? (HEX_COLOR_RE.test(bgColorHex.value.trim()) ? bgColorHex.value.trim() : '#FFFFFF') : null;
+            const bgColor = (format === 'jpeg' || !bgTransparentSelected) ? (HEX_COLOR_RE.test(bgColorHex.value.trim()) ? bgColorHex.value.trim() : '#FFFFFF') : null;
             
             const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality, { rotation, scaleH, scaleV }, bgColor);
 
