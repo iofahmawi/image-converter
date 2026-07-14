@@ -154,6 +154,17 @@
             border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color);
         }
         .dimensions-inputs { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .scale-buttons { display: flex; gap: 8px; flex: 1; }
+        .scale-btn {
+            flex: 1; padding: 9px 6px; border-radius: 6px; border: 1px solid var(--border-color);
+            background-color: #fff; color: var(--text-color); font-family: inherit;
+            font-weight: 700; font-size: 0.95em; cursor: pointer;
+        }
+        .scale-btn:hover { border-color: var(--primary-color); }
+        .scale-btn.active {
+            background-color: var(--primary-color); border-color: var(--primary-color);
+            color: var(--text-light-color);
+        }
         #aspectLock {
             background: none; border: none; cursor: pointer; padding: 5px;
             font-size: 1.5em; color: var(--primary-color); /* اللون البرتقالي الدائم */
@@ -283,7 +294,7 @@
             <p class="secondary-text">أو قم بسحب وإفلات الملفات في هذه المنطقة</p>
             <span class="upload-button">اختيار ملفات</span>
         </label>
-        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/bmp, .heic, image/heic">
+        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/bmp, .heic, image/heic, image/svg+xml, .svg">
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -329,10 +340,19 @@
 
                          <div class="control-group">
                             <h3>تغيير الأبعاد</h3>
-                            <div class="control-row">
+                            <div class="control-row" id="percentRow">
                                 <label for="percentSlider">النسبة:</label>
                                 <input type="range" id="percentSlider" min="1" max="400" value="100" style="width: 100%;">
                                 <span id="percentValue">100%</span>
+                            </div>
+                            <div class="control-row hidden" id="scaleButtonsRow">
+                                <label>الدقة:</label>
+                                <div class="scale-buttons">
+                                    <button type="button" class="scale-btn" data-scale="1">1×</button>
+                                    <button type="button" class="scale-btn" data-scale="2">2×</button>
+                                    <button type="button" class="scale-btn" data-scale="4">4×</button>
+                                    <button type="button" class="scale-btn" data-scale="8">8×</button>
+                                </div>
                             </div>
                             <div class="control-row">
                                 <label>الأبعاد:</label>
@@ -403,6 +423,9 @@
 
         const previewImage = document.getElementById('previewImage');
         const percentSlider = document.getElementById('percentSlider');
+        const percentRow = document.getElementById('percentRow');
+        const scaleButtonsRow = document.getElementById('scaleButtonsRow');
+        const scaleBtns = document.querySelectorAll('.scale-btn');
         const percentValue = document.getElementById('percentValue');
         const widthInput = document.getElementById('widthInput');
         const heightInput = document.getElementById('heightInput');
@@ -447,7 +470,8 @@
             }
             
             const file = files[0];
-            if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.heic')) {
+            const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+            if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.heic') && !isSvgFile) {
                 showToast('يرجى اختيار ملف صورة صالح.');
                 return;
             }
@@ -469,6 +493,7 @@
 
             singleFileData.name = file.name;
             singleFileData.type = file.type || 'image/jpeg';
+            singleFileData.isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
 
             if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
                 showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
@@ -498,7 +523,12 @@
 
         function resetSingleControls() {
             const { originalWidth, originalHeight } = singleFileData;
-            percentSlider.value = 100;
+            const percentMax = singleFileData.isSvg ? 800 : 400;
+            percentSlider.max = percentMax;
+            percentSlider.value = singleFileData.isSvg ? 200 : 100;
+            percentRow.classList.toggle('hidden', singleFileData.isSvg);
+            scaleButtonsRow.classList.toggle('hidden', !singleFileData.isSvg);
+            scaleBtns.forEach(b => b.classList.toggle('active', singleFileData.isSvg && b.dataset.scale === '2'));
             widthInput.value = originalWidth; heightInput.value = originalHeight;
             singleFileData.currentWidth = originalWidth; singleFileData.currentHeight = originalHeight;
             originalDimensions.textContent = `${originalWidth}x${originalHeight}`;
@@ -507,7 +537,7 @@
             aspectLock.querySelector('.lock-icon-closed').style.display = 'block';
             aspectLock.querySelector('.lock-icon-open').style.display = 'none';
             aspectLock.title = 'قفل نسبة العرض إلى الارتفاع';
-            formatSelect.value = 'jpeg';
+            formatSelect.value = singleFileData.isSvg ? 'png' : 'jpeg';
             toggleQualityControl(formatSelect, qualityControl);
             rotation = 0; scaleH = 1; scaleV = 1;
             updatePreviewTransform();
@@ -597,7 +627,7 @@
              const sliderBasedOn = isSideways ? singleFileData.currentHeight : singleFileData.currentWidth;
              const originalBasedOn = isSideways ? singleFileData.originalHeight : singleFileData.originalWidth;
             const percent = Math.round((sliderBasedOn / originalBasedOn) * 100);
-            percentSlider.value = Math.min(Math.max(percent, 1), 400);
+            percentSlider.value = Math.min(Math.max(percent, 1), parseInt(percentSlider.max, 10));
             
             percentValue.textContent = `${percentSlider.value}%`;
             if (percentSlider.value > 100) {
@@ -629,6 +659,15 @@
             widthInput.value = isSideways ? newHeight : newWidth;
             heightInput.value = isSideways ? newWidth : newHeight;
             updateNewDimensionsDisplay();
+        });
+
+        scaleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                scaleBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                percentSlider.value = parseInt(btn.dataset.scale, 10) * 100;
+                percentSlider.dispatchEvent(new Event('input'));
+            });
         });
 
         aspectLock.addEventListener('click', () => {
@@ -672,8 +711,8 @@
                 const input = document.createElement('input');
                 input.type = 'number';
                 input.className = 'editable-input';
-                input.min = min;
-                input.max = max;
+                input.min = sliderElement.min !== '' ? sliderElement.min : min;
+                input.max = sliderElement.max !== '' ? sliderElement.max : max;
                 input.value = originalValue;
                 input.style.width = '60px';
                 input.style.textAlign = 'center';
@@ -687,7 +726,9 @@
                     if (isNaN(newValue)) {
                         newValue = originalValue;
                     }
-                    newValue = Math.max(min, Math.min(newValue, max));
+                    const liveMin = sliderElement.min !== '' ? parseInt(sliderElement.min, 10) : min;
+                    const liveMax = sliderElement.max !== '' ? parseInt(sliderElement.max, 10) : max;
+                    newValue = Math.max(liveMin, Math.min(newValue, liveMax));
                     
                     sliderElement.value = newValue;
                     sliderElement.dispatchEvent(new Event('input', { bubbles: true }));
