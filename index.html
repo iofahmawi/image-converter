@@ -545,11 +545,35 @@
             }
         }
         
+        function detectRealTransparency(image) {
+            try {
+                const naturalW = image.naturalWidth || image.width;
+                const naturalH = image.naturalHeight || image.height;
+                if (!naturalW || !naturalH) return true; // can't check yet, assume yes to be safe
+                const maxDim = 400;
+                const scale = Math.min(1, maxDim / Math.max(naturalW, naturalH));
+                const w = Math.max(1, Math.round(naturalW * scale));
+                const h = Math.max(1, Math.round(naturalH * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(image, 0, 0, w, h);
+                const data = ctx.getImageData(0, 0, w, h).data;
+                for (let i = 3; i < data.length; i += 4) {
+                    if (data[i] < 255) return true;
+                }
+                return false;
+            } catch (e) {
+                return true; // tainted canvas or other failure: assume transparency to be safe
+            }
+        }
+
         function updateEditorWithNewImage(image) {
             singleFileData.originalImage = image;
             singleFileData.originalWidth = image.width;
             singleFileData.originalHeight = image.height;
             singleFileData.aspectRatio = image.width / image.height;
+            singleFileData.hasAlphaChannel = detectRealTransparency(image);
             previewImage.src = image.src;
             resetSingleControls();
         }
@@ -753,7 +777,7 @@
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
             qualityEl.classList.toggle('hidden', !isLossy);
-            const sourceHasNoAlpha = singleFileData.type === 'image/jpeg' || singleFileData.type === 'image/jpg' || singleFileData.type === 'image/bmp';
+            const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
