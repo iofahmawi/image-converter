@@ -509,8 +509,7 @@
                 return;
             }
 
-            pageTitle.style.display = 'none';
-            appIcon.style.display = 'none';
+            document.querySelector('.app-header').style.display = 'none';
             uploadArea.style.display = 'none';
             imageEditor.style.display = 'block';
             setupSingleFileEditor(file);
@@ -1001,6 +1000,7 @@
             editorView.classList.remove('hidden');
             cropperView.classList.add('hidden');
             uploadArea.style.display = 'flex';
+            document.querySelector('.app-header').style.display = 'flex';
             pageTitle.style.display = 'block';
             appIcon.style.display = 'flex';
             fileInput.value = '';
