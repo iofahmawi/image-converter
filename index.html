@@ -395,6 +395,7 @@
                                     <button type="button" class="bg-preset-btn" id="bgTransparentBtn" data-color="transparent" title="شفاف" aria-label="شفاف" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; cursor: pointer;"></button>
                                     <button type="button" class="bg-preset-btn" data-color="#ffffff" title="أبيض" aria-label="أبيض" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; cursor: pointer;"></button>
                                     <button type="button" class="bg-preset-btn" data-color="#000000" title="أسود" aria-label="أسود" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; cursor: pointer;"></button>
+                                    <button type="button" class="bg-preset-btn hidden" id="bgCustomBtn" data-color="#f4f7f9" title="آخر لون مخصص" aria-label="آخر لون مخصص" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #f4f7f9; cursor: pointer;"></button>
                                     <input type="text" id="bgColorHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
                                 </div>
                             </div>
@@ -707,9 +708,16 @@
         const bgColorControl = document.getElementById('backgroundColorControl');
         const bgColorHex = document.getElementById('bgColorHex');
         const bgTransparentBtn = document.getElementById('bgTransparentBtn');
-        const bgPresetBtns = document.querySelectorAll('.bg-preset-btn');
+        const bgWhiteBtn = document.querySelector('.bg-preset-btn[data-color="#ffffff"]');
+        const bgBlackBtn = document.querySelector('.bg-preset-btn[data-color="#000000"]');
+        const bgCustomBtn = document.getElementById('bgCustomBtn');
         const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
-        let bgTransparentSelected = true;
+        let selectedBgSource = 'transparent';
+        const storedCustomColor = localStorage.getItem('bgCustomColor');
+        if (storedCustomColor && HEX_COLOR_RE.test(storedCustomColor)) {
+            bgCustomBtn.dataset.color = storedCustomColor;
+            bgCustomBtn.style.background = storedCustomColor;
+        }
 
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
@@ -718,36 +726,51 @@
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
-            if (!supportsTransparency && bgTransparentSelected) bgTransparentSelected = false;
+            bgCustomBtn.classList.toggle('hidden', supportsTransparency);
+            if (!supportsTransparency && selectedBgSource === 'transparent') selectedBgSource = 'white';
             updateBgPresetSelection();
         };
         formatSelect.addEventListener('change', () => toggleQualityControl(formatSelect, qualityControl));
 
         const updateBgPresetSelection = () => {
-            const current = bgColorHex.value.trim().toUpperCase();
-            bgPresetBtns.forEach(btn => {
-                const isTransparentBtn = btn.dataset.color === 'transparent';
-                btn.classList.toggle('selected', isTransparentBtn ? bgTransparentSelected : (!bgTransparentSelected && btn.dataset.color.toUpperCase() === current));
-            });
+            bgTransparentBtn.classList.toggle('selected', selectedBgSource === 'transparent');
+            bgWhiteBtn.classList.toggle('selected', selectedBgSource === 'white');
+            bgBlackBtn.classList.toggle('selected', selectedBgSource === 'black');
+            bgCustomBtn.classList.toggle('selected', selectedBgSource === 'custom');
         };
 
-        bgPresetBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (btn.dataset.color === 'transparent') {
-                    bgTransparentSelected = true;
-                } else {
-                    bgTransparentSelected = false;
-                    bgColorHex.value = btn.dataset.color.toUpperCase();
-                }
-                updateBgPresetSelection();
-            });
+        const resolveBgColor = () => {
+            if (selectedBgSource === 'transparent') return null;
+            if (selectedBgSource === 'white') return '#FFFFFF';
+            if (selectedBgSource === 'black') return '#000000';
+            const custom = bgCustomBtn.dataset.color.trim().toUpperCase();
+            return HEX_COLOR_RE.test(custom) ? custom : '#FFFFFF';
+        };
+
+        bgTransparentBtn.addEventListener('click', () => { selectedBgSource = 'transparent'; updateBgPresetSelection(); });
+        bgWhiteBtn.addEventListener('click', () => { selectedBgSource = 'white'; updateBgPresetSelection(); });
+        bgBlackBtn.addEventListener('click', () => { selectedBgSource = 'black'; updateBgPresetSelection(); });
+        bgCustomBtn.addEventListener('click', () => {
+            selectedBgSource = 'custom';
+            bgColorHex.value = bgCustomBtn.dataset.color.toUpperCase();
+            updateBgPresetSelection();
+        });
+
+        bgColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                bgColorHex.blur();
+            }
         });
 
         bgColorHex.addEventListener('blur', () => {
             let val = bgColorHex.value.trim();
             if (val && !val.startsWith('#')) val = `#${val}`;
             bgColorHex.value = HEX_COLOR_RE.test(val) ? val.toUpperCase() : '#FFFFFF';
-            bgTransparentSelected = false;
+            selectedBgSource = 'custom';
+            bgCustomBtn.dataset.color = bgColorHex.value;
+            bgCustomBtn.style.background = bgColorHex.value;
+            localStorage.setItem('bgCustomColor', bgColorHex.value);
             updateBgPresetSelection();
         });
 
@@ -845,7 +868,7 @@
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
             const quality = (format === 'jpeg' || format === 'webp') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
-            const bgColor = (format === 'jpeg' || !bgTransparentSelected) ? (HEX_COLOR_RE.test(bgColorHex.value.trim()) ? bgColorHex.value.trim() : '#FFFFFF') : null;
+            const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
             
             const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality, { rotation, scaleH, scaleV }, bgColor);
 
