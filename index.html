@@ -714,7 +714,8 @@
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
             qualityEl.classList.toggle('hidden', !isLossy);
-            bgColorControl.classList.remove('hidden');
+            const sourceHasNoAlpha = singleFileData.type === 'image/jpeg' || singleFileData.type === 'image/jpg' || singleFileData.type === 'image/bmp';
+            bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             if (!supportsTransparency && bgTransparentSelected) bgTransparentSelected = false;
