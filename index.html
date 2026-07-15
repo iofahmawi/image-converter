@@ -913,8 +913,8 @@
             const encode = await getAvifEncoder();
             const ctx = canvas.getContext('2d');
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const cq = Math.round((1 - quality) * 62) + 1; // تحويل الجودة (0-1) إلى مستوى ضغط libavif (1 أفضل، 62 أسوأ)
-            const buffer = await encode(imageData, { cqLevel: cq });
+            const q = Math.max(1, Math.round(quality * 100)); // مقياس jSquash الفعلي: 1-100 (100 هو الأفضل)
+            const buffer = await encode(imageData, { quality: q });
             return new Blob([buffer], { type: 'image/avif' });
         }
 
