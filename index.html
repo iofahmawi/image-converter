@@ -397,6 +397,7 @@
                                     <option value="jpeg">JPEG</option>
                                     <option value="webp">WEBP</option>
                                     <option value="png">PNG</option>
+                                    <option value="avif">AVIF</option>
                                 </select>
                             </div>
                             <div id="qualityControl">
@@ -775,7 +776,7 @@
         }
 
         const toggleQualityControl = (formatEl, qualityEl) => {
-            const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp';
+            const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp' || formatEl.value === 'avif';
             qualityEl.classList.toggle('hidden', !isLossy);
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
@@ -897,6 +898,27 @@
         makeEditableOnClick(percentValue, percentSlider, { min: 1, max: 400 });
         makeEditableOnClick(qualityValue, qualitySlider, { min: 1, max: 100 });
         
+        // --- AVIF encoding (via jSquash WASM, loaded lazily on first use) ---
+        let avifEncoderPromise = null;
+        function getAvifEncoder() {
+            if (!avifEncoderPromise) {
+                showToast('جارٍ تحميل ترميز AVIF لأول مرة...');
+                avifEncoderPromise = import('https://esm.sh/@jsquash/avif@2.1.1')
+                    .then(mod => mod.encode)
+                    .catch(err => { avifEncoderPromise = null; throw err; });
+            }
+            return avifEncoderPromise;
+        }
+
+        async function encodeCanvasToAvif(canvas, quality) {
+            const encode = await getAvifEncoder();
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const cq = Math.round((1 - quality) * 62) + 1; // تحويل الجودة (0-1) إلى مستوى ضغط libavif (1 أفضل، 62 أسوأ)
+            const buffer = await encode(imageData, { cqLevel: cq });
+            return new Blob([buffer], { type: 'image/avif' });
+        }
+
         // --- Download Logic ---
         async function processImage(image, newWidth, newHeight, format, quality, transform, bgColor) {
             const isSideways = transform.rotation % 180 !== 0;
@@ -920,6 +942,16 @@
             ctx.drawImage(image, -newWidth / 2, -newHeight / 2, newWidth, newHeight);
             ctx.restore();
             
+            if (format === 'avif') {
+                try {
+                    return await encodeCanvasToAvif(canvas, quality ?? 0.75);
+                } catch (err) {
+                    console.error('AVIF encode failed:', err);
+                    showToast('فشل ترميز AVIF، تحقق من الاتصال بالإنترنت.');
+                    return null;
+                }
+            }
+
             return await new Promise(resolve => canvas.toBlob(resolve, `image/${format}`, quality));
         }
 
@@ -929,7 +961,7 @@
 
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
-            const quality = (format === 'jpeg' || format === 'webp') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
+            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
             const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
             
             const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality, { rotation, scaleH, scaleV }, bgColor);
