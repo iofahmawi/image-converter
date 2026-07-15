@@ -609,7 +609,18 @@
         }
         
         function updatePreviewTransform() {
-            previewImage.style.transform = `rotate(${rotation}deg) scale(${scaleH}, ${scaleV})`;
+            const originalWidth = singleFileData.originalWidth || 1;
+            const originalHeight = singleFileData.originalHeight || 1;
+            const distortX = (singleFileData.currentWidth || originalWidth) / originalWidth;
+            const distortY = (singleFileData.currentHeight || originalHeight) / originalHeight;
+            const isDistorted = Math.abs(distortX - distortY) > 0.01;
+
+            // Only visually stretch the preview when the ratio is actually distorted;
+            // uniform zoom just gets clipped by the box and isn't useful to show.
+            const previewScaleX = isDistorted ? distortX : 1;
+            const previewScaleY = isDistorted ? distortY : 1;
+            previewImage.style.transform = `rotate(${rotation}deg) scale(${scaleH * previewScaleX}, ${scaleV * previewScaleY})`;
+
             updateNewDimensionsDisplay();
         }
 
@@ -637,7 +648,7 @@
                 }
             }
             updateSliderFromDimensions();
-            updateNewDimensionsDisplay();
+            updatePreviewTransform();
         }
         widthInput.addEventListener('input', () => updateDimensionsFromInput(widthInput));
         heightInput.addEventListener('input', () => updateDimensionsFromInput(heightInput));
@@ -678,7 +689,7 @@
             singleFileData.currentHeight = newHeight;
             widthInput.value = isSideways ? newHeight : newWidth;
             heightInput.value = isSideways ? newWidth : newHeight;
-            updateNewDimensionsDisplay();
+            updatePreviewTransform();
         });
 
         scaleBtns.forEach(btn => {
