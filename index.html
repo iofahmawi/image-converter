@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محرر الصور السريع</title>
+    <title>محرر الصور</title>
     
     <!-- === PWA Additions === -->
     <meta name="theme-color" content="#f4f7f9">
@@ -69,9 +69,17 @@
 
         h1 {
             color: var(--text-color); 
-            margin: 0 0 24px 0; 
+            margin: 0; 
             font-weight: 600; 
             font-size: 1.7em; 
+        }
+        .app-header {
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; margin-bottom: 24px; gap: 8px;
+        }
+        .app-icon {
+            color: var(--primary-color);
+            display: flex;
         }
        
         #uploadArea {
@@ -297,7 +305,16 @@
 <body>
 
     <div class="container">
-        <h1>محرر الصور السريع</h1>
+        <div class="app-header">
+            <div class="app-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="44" height="44">
+                    <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="8.5" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M3.5 17l5.2-5.4a1.6 1.6 0 0 1 2.3 0l2.7 2.8 2-2a1.6 1.6 0 0 1 2.3 0l2.5 2.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1>محرر الصور</h1>
+        </div>
 
         <label for="fileInput" id="uploadArea">
             <p class="primary-text">اضغط هنا لرفع الصور</p>
@@ -429,6 +446,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         // --- DOM Elements ---
         const pageTitle = document.querySelector('h1');
+        const appIcon = document.querySelector('.app-icon');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const imageEditor = document.getElementById('imageEditor');
@@ -497,6 +515,7 @@
             }
 
             pageTitle.style.display = 'none';
+            appIcon.style.display = 'none';
             uploadArea.style.display = 'none';
             imageEditor.style.display = 'block';
             setupSingleFileEditor(file);
@@ -934,6 +953,7 @@
             cropperView.classList.add('hidden');
             uploadArea.style.display = 'flex';
             pageTitle.style.display = 'block';
+            appIcon.style.display = 'flex';
             fileInput.value = '';
             singleFileData = {};
         };
