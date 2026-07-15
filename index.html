@@ -101,7 +101,13 @@
             background-color: #f9f9f9; border: 1px solid var(--border-color);
             border-radius: 8px; display: flex; justify-content: center; align-items: center;
             padding: 15px; min-height: 350px; position: relative; margin-bottom: 30px;
-            overflow: hidden;
+            overflow: hidden; transition: background-color 0.2s ease;
+        }
+        #previewContainer.checkerboard-bg {
+            background-color: #f9f9f9;
+            background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
         #previewImage {
             max-width: 100%; max-height: 450px; object-fit: contain;
@@ -711,6 +717,7 @@
         const bgWhiteBtn = document.querySelector('.bg-preset-btn[data-color="#ffffff"]');
         const bgBlackBtn = document.querySelector('.bg-preset-btn[data-color="#000000"]');
         const bgCustomBtn = document.getElementById('bgCustomBtn');
+        const previewContainer = document.getElementById('previewContainer');
         const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
         let selectedBgSource = 'transparent';
         const storedCustomColor = localStorage.getItem('bgCustomColor');
@@ -737,6 +744,7 @@
             bgWhiteBtn.classList.toggle('selected', selectedBgSource === 'white');
             bgBlackBtn.classList.toggle('selected', selectedBgSource === 'black');
             bgCustomBtn.classList.toggle('selected', selectedBgSource === 'custom');
+            updatePreviewBackground();
         };
 
         const resolveBgColor = () => {
@@ -745,6 +753,13 @@
             if (selectedBgSource === 'black') return '#000000';
             const custom = bgCustomBtn.dataset.color.trim().toUpperCase();
             return HEX_COLOR_RE.test(custom) ? custom : '#FFFFFF';
+        };
+
+        const updatePreviewBackground = () => {
+            const bgControlActive = !bgColorControl.classList.contains('hidden');
+            const showCheckerboard = bgControlActive && selectedBgSource === 'transparent';
+            previewContainer.classList.toggle('checkerboard-bg', showCheckerboard);
+            previewContainer.style.backgroundColor = (bgControlActive && !showCheckerboard) ? resolveBgColor() : '';
         };
 
         bgTransparentBtn.addEventListener('click', () => { selectedBgSource = 'transparent'; updateBgPresetSelection(); });
