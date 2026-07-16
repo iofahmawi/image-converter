@@ -1,6 +1,6 @@
 // sw.js - Image Editor (Dynamic Version)
 
-const CACHE_NAME = 'image-editor-dynamic-v32';
+const CACHE_NAME = 'image-editor-dynamic-v33';
 
 // نخزن فقط ملف الواجهة لضمان نجاح التثبيت السريع
 const urlsToCache = [
