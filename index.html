@@ -108,7 +108,7 @@
         #previewContainer {
             background-color: #f9f9f9; border: 1px solid var(--border-color);
             border-radius: 8px; display: flex; justify-content: center; align-items: center;
-            padding: 15px; min-height: 350px; position: relative; margin-bottom: 30px;
+            padding: 15px; min-height: 350px; position: relative; margin-bottom: 10px;
             overflow: hidden; transition: background-color 0.2s ease;
         }
         #previewImage {
@@ -128,7 +128,7 @@
 
         .controls-layout { display: flex; gap: 30px; }
         #controlsContainerSingle {
-             display: flex; gap: 20px; flex-wrap: wrap; width: 100%;
+             display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
         .control-group {
             border: 1px solid var(--border-color); padding: 15px;
@@ -334,6 +334,9 @@
                     <div id="previewContainer">
                         <img id="previewImage" src="">
                     </div>
+                    <div id="originalFileInfoRow" class="info-row hidden" style="cursor: pointer; margin: 10px 0;">
+                        <span id="originalFileInfoText"></span>
+                    </div>
 
                     <div id="controlsContainerSingle" class="controls-layout">
                         <div class="control-group">
@@ -407,9 +410,6 @@
                                     <span id="qualityValue">90%</span>
                                 </div>
                             </div>
-                            <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
-                                الحجم المتوقع: <span id="estimatedSizeText">—</span>
-                            </div>
                             <div id="backgroundColorControl" class="hidden">
                                 <div class="control-row" style="flex-wrap: nowrap; gap: 8px;">
                                     <label for="bgColorHex" style="white-space: nowrap; flex-basis: auto; flex-shrink: 0; display: flex; align-items: center;">لون الخلفية:</label>
@@ -419,6 +419,9 @@
                                     <button type="button" class="bg-preset-btn hidden" id="bgCustomBtn" data-color="#f4f7f9" title="آخر لون مخصص" aria-label="آخر لون مخصص" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #f4f7f9; cursor: pointer;"></button>
                                     <input type="text" id="bgColorHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
                                 </div>
+                            </div>
+                            <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
+                                الحجم المتوقع: <span id="estimatedSizeText">—</span>
                             </div>
                         </div>
                     </div>
@@ -533,6 +536,8 @@
             singleFileData.name = file.name;
             singleFileData.type = file.type || 'image/jpeg';
             singleFileData.isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+            singleFileData.originalFileSize = file.size;
+            singleFileData.originalFileTypeLabel = getFileTypeLabel(file);
 
             if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
                 showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
@@ -581,6 +586,8 @@
             singleFileData.aspectRatio = image.width / image.height;
             singleFileData.hasAlphaChannel = detectRealTransparency(image);
             previewImage.src = image.src;
+            originalFileInfoRow.classList.add('hidden');
+            controlsContainerSingle.style.marginTop = '25px';
             resetSingleControls();
         }
 
@@ -968,6 +975,32 @@
             clearTimeout(sizeEstimateTimer);
             sizeEstimateTimer = setTimeout(estimateFileSize, 400);
         }
+
+        // --- Original File Info (type & size, shown on tap of preview image) ---
+        const originalFileInfoRow = document.getElementById('originalFileInfoRow');
+        const originalFileInfoText = document.getElementById('originalFileInfoText');
+        const controlsContainerSingle = document.getElementById('controlsContainerSingle');
+
+        function getFileTypeLabel(file) {
+            const mimeMap = {
+                'image/jpeg': 'JPEG', 'image/png': 'PNG', 'image/webp': 'WEBP',
+                'image/avif': 'AVIF', 'image/heic': 'HEIC', 'image/heif': 'HEIF',
+                'image/gif': 'GIF', 'image/bmp': 'BMP', 'image/svg+xml': 'SVG'
+            };
+            if (mimeMap[file.type]) return mimeMap[file.type];
+            const ext = file.name.split('.').pop();
+            return ext ? ext.toUpperCase() : 'ملف';
+        }
+
+        previewImage.addEventListener('click', () => {
+            if (!singleFileData.originalFileSize) return;
+            const isHidden = originalFileInfoRow.classList.contains('hidden');
+            if (isHidden) {
+                originalFileInfoText.textContent = `النوع : ${singleFileData.originalFileTypeLabel}\u00A0\u00A0\u00A0الحجم : ${formatBytes(singleFileData.originalFileSize)}`;
+            }
+            originalFileInfoRow.classList.toggle('hidden');
+            controlsContainerSingle.style.marginTop = isHidden ? '0' : '25px';
+        });
 
         // --- Download Logic ---
         async function processImage(image, newWidth, newHeight, format, quality, transform, bgColor) {
