@@ -26,6 +26,9 @@
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <!-- Library to create ZIP files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Library to compress PNG via color quantization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js"></script>
     
     <style>
         .bg-preset-btn.selected {
@@ -792,7 +795,8 @@
 
         const toggleQualityControl = (formatEl, qualityEl) => {
             const isLossy = formatEl.value === 'jpeg' || formatEl.value === 'webp' || formatEl.value === 'avif';
-            qualityEl.classList.toggle('hidden', !isLossy);
+            const isPng = formatEl.value === 'png';
+            qualityEl.classList.toggle('hidden', !isLossy && !isPng);
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
             estimatedSizeRow.style.marginTop = sourceHasNoAlpha ? '2px' : '15px';
@@ -802,7 +806,14 @@
             if (!supportsTransparency && selectedBgSource === 'transparent') selectedBgSource = 'white';
             updateBgPresetSelection();
         };
-        formatSelect.addEventListener('change', () => { toggleQualityControl(formatSelect, qualityControl); scheduleSizeEstimate(); });
+        formatSelect.addEventListener('change', () => {
+            if (formatSelect.value === 'png') {
+                qualitySlider.value = 100;
+                qualitySlider.dispatchEvent(new Event('input'));
+            }
+            toggleQualityControl(formatSelect, qualityControl);
+            scheduleSizeEstimate();
+        });
 
         const updateBgPresetSelection = () => {
             bgTransparentBtn.classList.toggle('selected', selectedBgSource === 'transparent');
@@ -937,6 +948,15 @@
             return new Blob([buffer], { type: 'image/avif' });
         }
 
+        async function encodeCanvasToCompressedPng(canvas, quality) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            // نربط شريط الضغط بعدد ألوان اللوحة: 100% = بدون ضغط (استُبعد قبل الوصول هنا)، وكل ما قلّت النسبة قلّ عدد الألوان والحجم
+            const colors = Math.max(4, Math.round(quality * 256));
+            const buffer = UPNG.encode([imageData.data.buffer], canvas.width, canvas.height, colors);
+            return new Blob([buffer], { type: 'image/png' });
+        }
+
         // --- Estimated Output Size ---
         function formatBytes(bytes) {
             if (bytes < 1024) return `${Math.round(bytes)} بايت`;
@@ -951,7 +971,7 @@
             estimatedSizeText.textContent = 'جارٍ الحساب...';
 
             const format = formatSelect.value;
-            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
+            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif' || format === 'png') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
             const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
             const { originalImage, currentWidth, currentHeight } = singleFileData;
             if (!currentWidth || !currentHeight) return;
@@ -1039,6 +1059,16 @@
                 }
             }
 
+            if (format === 'png' && typeof quality === 'number' && quality < 1) {
+                try {
+                    return await encodeCanvasToCompressedPng(canvas, quality);
+                } catch (err) {
+                    console.error('PNG quantize failed:', err);
+                    showToast('فشل ضغط PNG، تم استخدام الوضع الكامل.');
+                    return await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                }
+            }
+
             return await new Promise(resolve => canvas.toBlob(resolve, `image/${format}`, quality));
         }
 
@@ -1048,7 +1078,7 @@
 
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
-            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
+            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif' || format === 'png') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
             const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
             
             const blob = await processImage(originalImage, currentWidth, currentHeight, format, quality, { rotation, scaleH, scaleV }, bgColor);
