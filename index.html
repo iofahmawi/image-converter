@@ -503,7 +503,7 @@
         
         // --- File Handling ---
         const handleFileDrop = (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('dragging'); handleFiles(e.dataTransfer.files); };
-        const handleFileInputChange = (e) => handleFiles(e.target.files);
+        const handleFileInputChange = (e) => { const files = e.target.files; handleFiles(files); e.target.value = ''; };
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
         ['dragenter', 'dragover'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.add('dragging')));
         ['dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.remove('dragging')));
@@ -535,6 +535,7 @@
             const process = (dataUrl) => {
                 const img = new Image();
                 img.onload = () => updateEditorWithNewImage(img);
+                img.onerror = () => resetApp();
                 img.src = dataUrl;
             };
 
@@ -550,6 +551,7 @@
                     .then(res => new Promise(resolve => {
                         const reader = new FileReader();
                         reader.onload = e => resolve(e.target.result);
+                        reader.onerror = () => resetApp();
                         reader.readAsDataURL(res);
                     }))
                     .then(process)
@@ -557,6 +559,7 @@
             } else {
                 const reader = new FileReader();
                 reader.onload = e => process(e.target.result);
+                reader.onerror = () => resetApp();
                 reader.readAsDataURL(file);
             }
         }
