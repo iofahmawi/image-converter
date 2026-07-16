@@ -407,6 +407,9 @@
                                     <span id="qualityValue">90%</span>
                                 </div>
                             </div>
+                            <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
+                                الحجم المتوقع: <span id="estimatedSizeText">—</span>
+                            </div>
                             <div id="backgroundColorControl" class="hidden">
                                 <div class="control-row" style="flex-wrap: nowrap; gap: 8px;">
                                     <label for="bgColorHex" style="white-space: nowrap; flex-basis: auto; flex-shrink: 0; display: flex; align-items: center;">لون الخلفية:</label>
@@ -469,6 +472,7 @@
         const qualityControl = document.getElementById('qualityControl');
         const qualitySlider = document.getElementById('qualitySlider');
         const qualityValue = document.getElementById('qualityValue');
+        const estimatedSizeText = document.getElementById('estimatedSizeText');
         const actionsContainer = document.getElementById('actionsContainer');
         const downloadButton = document.getElementById('downloadButton');
         const resetButton = document.getElementById('resetButton');
@@ -483,6 +487,8 @@
         let rotation = 0;
         let scaleH = 1;
         let scaleV = 1;
+        let sizeEstimateToken = 0;
+        let sizeEstimateTimer = null;
         
         const MEMORY_LIMIT_BYTES = 256 * 1024 * 1024;
         const showToast = (message) => alert(message);
@@ -659,6 +665,7 @@
             previewImage.style.transform = `rotate(${rotation}deg) scale(${scaleH * previewScaleX}, ${scaleV * previewScaleY})`;
 
             updateNewDimensionsDisplay();
+            scheduleSizeEstimate();
         }
 
         rotateLeftBtn.addEventListener('click', () => { rotation -= 90; updatePreviewTransform(); });
@@ -785,7 +792,7 @@
             if (!supportsTransparency && selectedBgSource === 'transparent') selectedBgSource = 'white';
             updateBgPresetSelection();
         };
-        formatSelect.addEventListener('change', () => toggleQualityControl(formatSelect, qualityControl));
+        formatSelect.addEventListener('change', () => { toggleQualityControl(formatSelect, qualityControl); scheduleSizeEstimate(); });
 
         const updateBgPresetSelection = () => {
             bgTransparentBtn.classList.toggle('selected', selectedBgSource === 'transparent');
@@ -807,6 +814,7 @@
             const bgControlActive = !bgColorControl.classList.contains('hidden');
             const showColor = bgControlActive && selectedBgSource !== 'transparent';
             previewContainer.style.backgroundColor = showColor ? resolveBgColor() : '';
+            scheduleSizeEstimate();
         };
 
         bgTransparentBtn.addEventListener('click', () => { selectedBgSource = 'transparent'; updateBgPresetSelection(); });
@@ -840,6 +848,7 @@
 
         qualitySlider.addEventListener('input', () => {
             qualityValue.textContent = `${qualitySlider.value}%`;
+            scheduleSizeEstimate();
         });
 
         function makeEditableOnClick(spanElement, sliderElement, options) {
@@ -916,6 +925,48 @@
             const q = Math.max(1, Math.round(quality * 100)); // مقياس jSquash الفعلي: 1-100 (100 هو الأفضل)
             const buffer = await encode(imageData, { quality: q });
             return new Blob([buffer], { type: 'image/avif' });
+        }
+
+        // --- Estimated Output Size ---
+        function formatBytes(bytes) {
+            if (bytes < 1024) return `${Math.round(bytes)} بايت`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 100 * 1024 ? 1 : 0)} كيلوبايت`;
+            return `${(bytes / (1024 * 1024)).toFixed(2)} ميجابايت`;
+        }
+
+        async function estimateFileSize() {
+            if (!singleFileData.originalImage) return;
+            const myToken = ++sizeEstimateToken;
+            estimatedSizeText.textContent = 'جارٍ الحساب...';
+
+            const format = formatSelect.value;
+            const quality = (format === 'jpeg' || format === 'webp' || format === 'avif') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
+            const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
+            const { originalImage, currentWidth, currentHeight } = singleFileData;
+            if (!currentWidth || !currentHeight) return;
+
+            // نشفّر بالدقة الكاملة دائمًا (نتيجة مطابقة تمامًا) إلا لصور AVIF الكبيرة جدًا
+            // (تصغير خفيف بالنص فقط لتفادي البطء، عشان ما يضخّم الخطأ عند إعادة التكبير الحسابي)
+            const maxFullResDim = format === 'avif' ? 1600 : Infinity;
+            const largestDim = Math.max(currentWidth, currentHeight);
+            const sampleScale = largestDim > maxFullResDim ? 0.5 : 1;
+            const sampleWidth = Math.max(1, Math.round(currentWidth * sampleScale));
+            const sampleHeight = Math.max(1, Math.round(currentHeight * sampleScale));
+
+            try {
+                const blob = await processImage(originalImage, sampleWidth, sampleHeight, format, quality, { rotation, scaleH, scaleV }, bgColor);
+                if (myToken !== sizeEstimateToken) return; // نتيجة قديمة، تجاهلها
+                if (!blob) { estimatedSizeText.textContent = '—'; return; }
+                const areaRatio = (currentWidth * currentHeight) / (sampleWidth * sampleHeight);
+                estimatedSizeText.textContent = formatBytes(blob.size * areaRatio);
+            } catch (err) {
+                if (myToken === sizeEstimateToken) estimatedSizeText.textContent = '—';
+            }
+        }
+
+        function scheduleSizeEstimate() {
+            clearTimeout(sizeEstimateTimer);
+            sizeEstimateTimer = setTimeout(estimateFileSize, 400);
         }
 
         // --- Download Logic ---
