@@ -746,6 +746,7 @@
             widthInput.value = isSideways ? newHeight : newWidth;
             heightInput.value = isSideways ? newWidth : newHeight;
             updatePreviewTransform();
+            scheduleSizeEstimate();
         });
 
         scaleBtns.forEach(btn => {
@@ -969,6 +970,9 @@
             if (!singleFileData.originalImage) return;
             const myToken = ++sizeEstimateToken;
             estimatedSizeText.textContent = 'جارٍ الحساب...';
+            // نعطي المتصفح فرصة يرسم نص "جارٍ الحساب..." قبل بدء عملية الضغط الثقيلة والمتزامنة (خصوصًا ضغط PNG عبر UPNG)
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            if (myToken !== sizeEstimateToken) return; // انطلب تقدير جديد أثناء الانتظار، نتجاهل هذا القديم
 
             const format = formatSelect.value;
             const quality = (format === 'jpeg' || format === 'webp' || format === 'avif' || format === 'png') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
