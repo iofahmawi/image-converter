@@ -390,8 +390,8 @@
                                     <input type="number" id="heightInput" min="1" placeholder="الارتفاع">
                                 </div>
                             </div>
-                             <div class="info-row">الأبعاد الأصلية: <span id="originalDimensions"></span></div>
-                            <div class="info-row">الأبعاد الجديدة: <span id="newDimensions"></span></div>
+                             <div class="info-row">الأبعاد الأصلية : <span id="originalDimensions"></span></div>
+                            <div class="info-row">الأبعاد الجديدة : <span id="newDimensions"></span></div>
                         </div>
                         <div class="control-group">
                             <h3>الصيغة والجودة</h3>
@@ -422,7 +422,7 @@
                                 </div>
                             </div>
                             <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
-                                الحجم المتوقع: <span id="estimatedSizeText">—</span>
+                                الحجم المتوقع : <span id="estimatedSizeText">—</span>
                             </div>
                         </div>
                     </div>
@@ -940,8 +940,9 @@
         // --- Estimated Output Size ---
         function formatBytes(bytes) {
             if (bytes < 1024) return `${Math.round(bytes)} بايت`;
-            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 100 * 1024 ? 1 : 0)} كيلوبايت`;
-            return `${(bytes / (1024 * 1024)).toFixed(2)} ميجابايت`;
+            const LRI = '\u2066', PDI = '\u2069'; // عزل اتجاهي يمنع RTL من قلب ترتيب الرقم والوحدة
+            if (bytes < 1024 * 1024) return `${LRI}${(bytes / 1024).toFixed(bytes < 100 * 1024 ? 1 : 0)} KB${PDI}`;
+            return `${LRI}${(bytes / (1024 * 1024)).toFixed(2)} MB${PDI}`;
         }
 
         async function estimateFileSize() {
@@ -995,7 +996,7 @@
             return ext ? ext.toUpperCase() : 'ملف';
         }
 
-        previewImage.addEventListener('click', () => {
+        previewContainer.addEventListener('click', () => {
             if (!singleFileData.originalFileSize) return;
             const isHidden = originalFileInfoRow.classList.contains('hidden');
             if (isHidden) {
