@@ -127,6 +127,7 @@
         }
 
         .controls-layout { display: flex; gap: 30px; }
+        #backgroundColorControl { display: flow-root; }
         #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
@@ -476,6 +477,7 @@
         const qualitySlider = document.getElementById('qualitySlider');
         const qualityValue = document.getElementById('qualityValue');
         const estimatedSizeText = document.getElementById('estimatedSizeText');
+        const estimatedSizeRow = document.getElementById('estimatedSizeRow');
         const actionsContainer = document.getElementById('actionsContainer');
         const downloadButton = document.getElementById('downloadButton');
         const resetButton = document.getElementById('resetButton');
@@ -793,6 +795,7 @@
             qualityEl.classList.toggle('hidden', !isLossy);
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
+            estimatedSizeRow.style.marginTop = sourceHasNoAlpha ? '2px' : '15px';
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             bgCustomBtn.classList.toggle('hidden', supportsTransparency);
