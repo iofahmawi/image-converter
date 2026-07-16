@@ -410,8 +410,8 @@
                             <div id="qualityControl">
                                 <div class="control-row">
                                     <label for="qualitySlider">الجودة:</label>
-                                    <input type="range" id="qualitySlider" min="1" max="100" value="90" style="width: 100%;">
-                                    <span id="qualityValue">90%</span>
+                                    <input type="range" id="qualitySlider" min="1" max="100" value="100" style="width: 100%;">
+                                    <span id="qualityValue">100%</span>
                                 </div>
                             </div>
                             <div id="backgroundColorControl" class="hidden">
@@ -613,6 +613,7 @@
             aspectLock.querySelector('.lock-icon-open').style.display = 'none';
             aspectLock.title = 'قفل نسبة العرض إلى الارتفاع';
             formatSelect.value = singleFileData.isSvg ? 'png' : 'jpeg';
+            qualitySlider.value = 100;
             toggleQualityControl(formatSelect, qualityControl);
             rotation = 0; scaleH = 1; scaleV = 1;
             updatePreviewTransform();
