@@ -131,7 +131,7 @@
 
         .controls-layout { display: flex; gap: 30px; }
         #backgroundColorControl { display: flow-root; }
-        #backgroundColorControl .control-row, #qualityControl .control-row { margin-bottom: 0 !important; }
+        #backgroundColorControl .control-row { margin-bottom: 0 !important; }
         #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
@@ -795,7 +795,7 @@
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
             const qualityRow = qualityEl.querySelector('.control-row');
-            if (qualityRow) qualityRow.style.marginBottom = '0';
+            if (qualityRow) qualityRow.style.marginBottom = sourceHasNoAlpha ? '0' : '';
             const bgRow = bgColorControl.querySelector('.control-row');
             if (bgRow) bgRow.style.marginBottom = '0';
             estimatedSizeRow.style.marginTop = sourceHasNoAlpha ? "14px" : "28px";
