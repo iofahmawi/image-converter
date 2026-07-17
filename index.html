@@ -131,7 +131,7 @@
 
         .controls-layout { display: flex; gap: 30px; }
         #backgroundColorControl { display: flow-root; }
-        #backgroundColorControl .control-row { margin-bottom: 0; }
+        #backgroundColorControl .control-row, #qualityControl .control-row { margin-bottom: 0 !important; }
         #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
@@ -794,7 +794,11 @@
             qualityEl.classList.toggle('hidden', !isLossy && !isPng);
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
-            estimatedSizeRow.style.marginTop = "28px";
+            const qualityRow = qualityEl.querySelector('.control-row');
+            if (qualityRow) qualityRow.style.marginBottom = '0';
+            const bgRow = bgColorControl.querySelector('.control-row');
+            if (bgRow) bgRow.style.marginBottom = '0';
+            estimatedSizeRow.style.marginTop = sourceHasNoAlpha ? "14px" : "28px";
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             bgCustomBtn.classList.toggle('hidden', supportsTransparency);
