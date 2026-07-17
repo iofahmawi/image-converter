@@ -782,6 +782,7 @@
         const previewContainer = document.getElementById('previewContainer');
         const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
         let selectedBgSource = 'transparent';
+        let bgAutoForcedWhite = false;
         const storedCustomColor = localStorage.getItem('bgCustomColor');
         if (storedCustomColor && HEX_COLOR_RE.test(storedCustomColor)) {
             bgCustomBtn.dataset.color = storedCustomColor;
@@ -802,7 +803,13 @@
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             bgCustomBtn.classList.toggle('hidden', supportsTransparency);
-            if (!supportsTransparency && selectedBgSource === 'transparent') selectedBgSource = 'white';
+            if (!supportsTransparency && selectedBgSource === 'transparent') {
+                selectedBgSource = 'white';
+                bgAutoForcedWhite = true;
+            } else if (supportsTransparency && bgAutoForcedWhite) {
+                selectedBgSource = 'transparent';
+                bgAutoForcedWhite = false;
+            }
             updateBgPresetSelection();
         };
         formatSelect.addEventListener('change', () => {
@@ -837,11 +844,12 @@
             scheduleSizeEstimate();
         };
 
-        bgTransparentBtn.addEventListener('click', () => { selectedBgSource = 'transparent'; updateBgPresetSelection(); });
-        bgWhiteBtn.addEventListener('click', () => { selectedBgSource = 'white'; updateBgPresetSelection(); });
-        bgBlackBtn.addEventListener('click', () => { selectedBgSource = 'black'; updateBgPresetSelection(); });
+        bgTransparentBtn.addEventListener('click', () => { selectedBgSource = 'transparent'; bgAutoForcedWhite = false; updateBgPresetSelection(); });
+        bgWhiteBtn.addEventListener('click', () => { selectedBgSource = 'white'; bgAutoForcedWhite = false; updateBgPresetSelection(); });
+        bgBlackBtn.addEventListener('click', () => { selectedBgSource = 'black'; bgAutoForcedWhite = false; updateBgPresetSelection(); });
         bgCustomBtn.addEventListener('click', () => {
             selectedBgSource = 'custom';
+            bgAutoForcedWhite = false;
             bgColorHex.value = bgCustomBtn.dataset.color.toUpperCase();
             updateBgPresetSelection();
         });
@@ -858,6 +866,7 @@
             if (val && !val.startsWith('#')) val = `#${val}`;
             bgColorHex.value = HEX_COLOR_RE.test(val) ? val.toUpperCase() : '#FFFFFF';
             selectedBgSource = 'custom';
+            bgAutoForcedWhite = false;
             bgCustomBtn.dataset.color = bgColorHex.value;
             bgCustomBtn.style.background = bgColorHex.value;
             localStorage.setItem('bgCustomColor', bgColorHex.value);
