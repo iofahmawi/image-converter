@@ -682,14 +682,23 @@
             }
         }
         
-        function setupSingleFileEditor(file) {
+        function setupSingleFileEditor(file, attempt) {
+            attempt = attempt || 1;
             singleEditorView.style.display = 'block';
 
-            const process = (dataUrl) => {
+            const process = (url) => {
                 const img = new Image();
-                img.onload = () => updateEditorWithNewImage(img);
-                img.onerror = () => resetApp();
-                img.src = dataUrl;
+                img.onload = () => { singleFileData.objectUrl = url; updateEditorWithNewImage(img); };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    if (attempt < 3) {
+                        setupSingleFileEditor(file, attempt + 1);
+                    } else {
+                        showToast('تعذر تحميل الصورة، يرجى المحاولة مرة أخرى.');
+                        resetApp();
+                    }
+                };
+                img.src = url;
             };
 
             singleFileData.name = file.name;
@@ -699,21 +708,20 @@
             singleFileData.originalFileTypeLabel = getFileTypeLabel(file);
 
             if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
-                showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
+                if (attempt === 1) showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
                 heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 })
-                    .then(res => new Promise(resolve => {
-                        const reader = new FileReader();
-                        reader.onload = e => resolve(e.target.result);
-                        reader.onerror = () => resetApp();
-                        reader.readAsDataURL(res);
-                    }))
-                    .then(process)
-                    .catch(err => { console.error(err); showToast('فشل تحويل HEIC.'); resetApp(); });
+                    .then(res => process(URL.createObjectURL(res)))
+                    .catch(err => {
+                        console.error(err);
+                        if (attempt < 3) {
+                            setupSingleFileEditor(file, attempt + 1);
+                        } else {
+                            showToast('فشل تحويل HEIC.');
+                            resetApp();
+                        }
+                    });
             } else {
-                const reader = new FileReader();
-                reader.onload = e => process(e.target.result);
-                reader.onerror = () => resetApp();
-                reader.readAsDataURL(file);
+                process(URL.createObjectURL(file));
             }
         }
         
@@ -1288,6 +1296,8 @@
 
         const resetApp = () => {
             if(cropper) cropper.destroy(); cropper = null;
+            if (singleFileData.objectUrl) URL.revokeObjectURL(singleFileData.objectUrl);
+            batchFiles.forEach(f => { if (f.objectUrl) URL.revokeObjectURL(f.objectUrl); });
             imageEditor.style.display = 'none';
             singleEditorView.style.display = 'none';
             batchEditorView.style.display = 'none';
@@ -1310,31 +1320,30 @@
 
         // ================= BATCH MODE =================
 
-        function loadFileAsImage(file) {
+        function loadFileAsImage(file, attempt) {
+            attempt = attempt || 1;
             return new Promise((resolve, reject) => {
                 const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
                 const isHeic = file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic');
-                const finish = (dataUrl) => {
+                const finish = (url) => {
                     const img = new Image();
-                    img.onload = () => resolve({ img, isSvg: isSvgFile });
-                    img.onerror = reject;
-                    img.src = dataUrl;
+                    img.onload = () => resolve({ img, isSvg: isSvgFile, objectUrl: url });
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        if (attempt < 3) resolve(loadFileAsImage(file, attempt + 1));
+                        else reject(new Error('decode-failed'));
+                    };
+                    img.src = url;
                 };
                 if (isHeic) {
                     heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
-                        .then(res => new Promise((res2, rej2) => {
-                            const reader = new FileReader();
-                            reader.onload = e => res2(e.target.result);
-                            reader.onerror = rej2;
-                            reader.readAsDataURL(res);
-                        }))
-                        .then(finish)
-                        .catch(reject);
+                        .then(res => finish(URL.createObjectURL(res)))
+                        .catch(err => {
+                            if (attempt < 3) resolve(loadFileAsImage(file, attempt + 1));
+                            else reject(err);
+                        });
                 } else {
-                    const reader = new FileReader();
-                    reader.onload = e => finish(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
+                    finish(URL.createObjectURL(file));
                 }
             });
         }
@@ -1348,13 +1357,14 @@
             let idCounter = 0;
             for (const file of files) {
                 try {
-                    const { img, isSvg } = await loadFileAsImage(file);
+                    const { img, isSvg, objectUrl } = await loadFileAsImage(file);
                     const entry = {
                         id: idCounter++,
                         name: file.name,
                         type: file.type || 'image/jpeg',
                         isSvg,
                         originalImage: img,
+                        objectUrl,
                         originalWidth: img.width,
                         originalHeight: img.height,
                         aspectRatio: img.width / img.height,
@@ -1383,6 +1393,7 @@
             removeBtn.title = 'إزالة';
             removeBtn.addEventListener('click', () => {
                 batchFiles = batchFiles.filter(f => f.id !== entry.id);
+                if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
                 div.remove();
                 batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
                 if (batchFiles.length === 0) resetApp();
