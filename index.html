@@ -146,12 +146,12 @@
         }
         .control-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .control-row label { flex-basis: 70px; flex-shrink: 0; font-weight: 700; font-size: 1em; }
-        .control-row input[type="number"], .control-row select {
+        .control-row input[type="number"], .control-row select, .editable-input {
             width: 100%; padding: 9px 10px; border-radius: 6px; border: 1px solid var(--border-color);
             outline: none; transition: border-color 0.3s, box-shadow 0.3s;
             font-size: 1em; height: 42px;
         }
-        .control-row input[type="number"] { text-align: center; }
+        .control-row input[type="number"], .editable-input { text-align: center; }
         
         /* --- START: Dropdown arrow fix --- */
         .control-row select {
@@ -166,7 +166,7 @@
         }
         /* --- END: Dropdown arrow fix --- */
 
-        .control-row input[type="number"]:focus, .control-row select:focus {
+        .control-row input[type="number"]:focus, .control-row select:focus, .editable-input:focus {
             border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color);
         }
         .dimensions-inputs { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -421,7 +421,7 @@
                                     <button type="button" class="bg-preset-btn" data-color="#ffffff" title="أبيض" aria-label="أبيض" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; cursor: pointer;"></button>
                                     <button type="button" class="bg-preset-btn" data-color="#000000" title="أسود" aria-label="أسود" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; cursor: pointer;"></button>
                                     <button type="button" class="bg-preset-btn hidden" id="bgCustomBtn" data-color="#f4f7f9" title="آخر لون مخصص" aria-label="آخر لون مخصص" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #f4f7f9; cursor: pointer;"></button>
-                                    <input type="text" id="bgColorHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
+                                    <input type="text" id="bgColorHex" enterkeyhint="done" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
                                 </div>
                             </div>
                             <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
@@ -885,7 +885,10 @@
 
                 const originalValue = parseInt(spanElement.textContent, 10);
                 const input = document.createElement('input');
-                input.type = 'number';
+                input.type = 'text';
+                input.setAttribute('enterkeyhint', 'done');
+                input.setAttribute('inputmode', 'numeric');
+                input.setAttribute('pattern', '[0-9]*');
                 input.className = 'editable-input';
                 input.min = sliderElement.min !== '' ? sliderElement.min : min;
                 input.max = sliderElement.max !== '' ? sliderElement.max : max;
@@ -897,7 +900,11 @@
                 input.style.borderRadius = '4px';
                 input.style.fontWeight = '700';
 
+                let finalized = false;
                 function finalize() {
+                    if (finalized) return;
+                    finalized = true;
+
                     let newValue = parseInt(input.value, 10);
                     if (isNaN(newValue)) {
                         newValue = originalValue;
@@ -916,8 +923,9 @@
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        finalize();
+                        input.blur();
                     } else if (e.key === 'Escape') {
+                        finalized = true;
                         input.replaceWith(spanElement);
                         spanElement.textContent = `${originalValue}%`;
                     }
