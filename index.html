@@ -131,6 +131,7 @@
 
         .controls-layout { display: flex; gap: 30px; }
         #backgroundColorControl { display: flow-root; }
+        #backgroundColorControl .control-row { margin-bottom: 0; }
         #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
@@ -187,7 +188,7 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        .info-row { font-size: 0.9em; color: #777; text-align: center; margin-top: 5px; }
+        .info-row { font-size: 0.9em; color: #777; text-align: center; margin-top: 28px; }
         #originalDimensions { font-weight: bold; direction: ltr; display: inline-block; }
 
         #percentValue, #qualityValue {
@@ -423,7 +424,7 @@
                                     <input type="text" id="bgColorHex" enterkeyhint="done" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" dir="ltr" style="box-sizing: border-box; flex-shrink: 1; min-width: 40px; width: 70px; height: 33px; padding: 0 6px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.78em; text-align: center; text-transform: uppercase;">
                                 </div>
                             </div>
-                            <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 2px;">
+                            <div id="estimatedSizeRow" style="text-align: center; font-size: 13px; color: #888; margin-top: 28px;">
                                 الحجم المتوقع : <span id="estimatedSizeText">—</span>
                             </div>
                         </div>
@@ -793,7 +794,7 @@
             qualityEl.classList.toggle('hidden', !isLossy && !isPng);
             const sourceHasNoAlpha = !singleFileData.hasAlphaChannel;
             bgColorControl.classList.toggle('hidden', sourceHasNoAlpha);
-            estimatedSizeRow.style.marginTop = sourceHasNoAlpha ? '2px' : '15px';
+            estimatedSizeRow.style.marginTop = "28px";
             const supportsTransparency = formatEl.value !== 'jpeg';
             bgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             bgCustomBtn.classList.toggle('hidden', supportsTransparency);
