@@ -1432,7 +1432,33 @@
             batchGroupDimensions.classList.toggle('group-disabled', !batchDimensionsEnable.checked);
             batchGroupFormat.classList.toggle('group-disabled', !batchFormatEnable.checked);
         }
-        [batchTransformEnable, batchDimensionsEnable, batchFormatEnable].forEach(cb => cb.addEventListener('change', updateBatchGroupState));
+        batchTransformEnable.addEventListener('change', () => {
+            if (!batchTransformEnable.checked) {
+                batchScaleH = 1; batchScaleV = 1;
+                updateBatchTransformStatus();
+            }
+            updateBatchGroupState();
+        });
+        batchDimensionsEnable.addEventListener('change', () => {
+            if (!batchDimensionsEnable.checked) {
+                batchPercentSlider.value = 100;
+                batchPercentValue.textContent = '100%';
+                batchWidthInput.value = '';
+                batchHeightInput.value = '';
+                updateBatchDimensionModeUI();
+            }
+            updateBatchGroupState();
+        });
+        batchFormatEnable.addEventListener('change', () => {
+            if (!batchFormatEnable.checked) {
+                batchFormatSelect.value = 'jpeg';
+                batchQualitySlider.value = 100;
+                batchQualityValue.textContent = '100%';
+                batchSelectedBgSource = 'white';
+                toggleBatchQualityControl();
+            }
+            updateBatchGroupState();
+        });
 
         function updateBatchTransformStatus() {
             batchTransformStatus.innerHTML = `قلب أفقي : <span style="font-weight:700;">${batchScaleH === -1 ? 'نعم' : 'لا'}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;قلب عمودي : <span style="font-weight:700;">${batchScaleV === -1 ? 'نعم' : 'لا'}</span>`;
