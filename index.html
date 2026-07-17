@@ -135,6 +135,9 @@
         #controlsContainerSingle {
              display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
         }
+        #controlsContainerBatch {
+             display: flex; gap: 20px; flex-wrap: wrap; width: 100%; margin-top: 25px;
+        }
         .control-group {
             border: 1px solid var(--border-color); padding: 15px;
             border-radius: 8px; flex: 1; min-width: 280px;
@@ -302,7 +305,7 @@
         .control-group.group-disabled .info-row { opacity: 1; pointer-events: auto; }
         #batchThumbsGrid {
             display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-            margin-bottom: 20px; padding: 12px; max-height: 260px; overflow-y: auto;
+            margin-bottom: 10px; padding: 12px; max-height: 260px; overflow-y: auto;
             border: 1px solid var(--border-color); border-radius: 8px; background: #f9f9f9;
         }
         .batch-thumb { width: 64px; height: 64px; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #fff; }
@@ -325,7 +328,8 @@
                 margin-bottom: 30px;
             }
             .controls-layout { flex-direction: column; }
-            #controlsContainerSingle { flex-direction: column; gap: 15px; }
+            #controlsContainerSingle, #controlsContainerBatch { flex-direction: column; gap: 17px; }
+            #batchCountLabel { margin-top: -4px; margin-bottom: 16px; }
         }
     </style>
 </head>
