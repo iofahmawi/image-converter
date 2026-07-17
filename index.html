@@ -288,6 +288,32 @@
         .site-footer a { color: var(--primary-color); text-decoration: none; font-weight: bold; font-size: 1.1em; }
         .site-footer a:hover { text-decoration: underline; }
 
+        .control-group h3.group-header {
+            position: relative;
+            text-align: center; margin-bottom: 15px;
+        }
+        .group-toggle {
+            position: absolute; left: 0; top: 50%; transform: translateY(calc(-50% - 5px));
+            display: flex; align-items: center;
+            cursor: pointer;
+        }
+        .group-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-color); margin: 0; }
+        .control-group.group-disabled .control-row,
+        .control-group.group-disabled .info-row { opacity: 1; pointer-events: auto; }
+        #batchThumbsGrid {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+            margin-bottom: 20px; padding: 12px; max-height: 260px; overflow-y: auto;
+            border: 1px solid var(--border-color); border-radius: 8px; background: #f9f9f9;
+        }
+        .batch-thumb { width: 64px; height: 64px; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #fff; }
+        .batch-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .batch-thumb .remove-thumb {
+            position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.6); color: #fff;
+            border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px;
+            line-height: 18px; cursor: pointer; padding: 0;
+        }
+        #batchCountLabel { text-align: center; font-size: 0.9rem; color: #777; margin-bottom: 12px; }
+
         @media (max-width: 768px) {
             body { 
                 font-size: 15px; 
@@ -322,7 +348,7 @@
             <p class="secondary-text">أو قم بسحب وإفلات الملفات في هذه المنطقة</p>
             <span class="upload-button">اختيار ملفات</span>
         </label>
-        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg">
+        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg">
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -442,6 +468,95 @@
                     </div>
                 </div>
             </div>
+
+            <div id="batchEditorView" style="display:none;">
+                <div id="batchCountLabel"></div>
+                <div id="batchThumbsGrid"></div>
+
+                <div id="controlsContainerBatch" class="controls-layout">
+                    <div class="control-group" id="batchGroupTransform">
+                        <h3 class="group-header">
+                            تحرير أساسي
+                            <label class="group-toggle">
+                                <input type="checkbox" id="batchTransformEnable">
+                            </label>
+                        </h3>
+                        <div class="control-row">
+                            <div class="transform-buttons" style="width: 100%;">
+                                <button class="transform-btn" id="batch-flip-h" title="قلب أفقي">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12l-4-4v3H7v-3l-4 4 4 4v-3h10v3z"/></svg>
+                                </button>
+                                <button class="transform-btn" id="batch-flip-v" title="قلب عمودي">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21l-4-4h3V7H8l4-4 4 4h-3v10h3l-4 4z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="info-row" id="batchTransformStatus" style="font-size: 0.78rem;">قلب أفقي : <span style="font-weight:700;">لا</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;قلب عمودي : <span style="font-weight:700;">لا</span></div>
+                    </div>
+
+                    <div class="control-group" id="batchGroupDimensions">
+                        <h3 class="group-header">
+                            تغيير الأبعاد
+                            <label class="group-toggle">
+                                <input type="checkbox" id="batchDimensionsEnable">
+                            </label>
+                        </h3>
+                        <div class="control-row" id="batchPercentRow">
+                            <label for="batchPercentSlider">النسبة:</label>
+                            <input type="range" id="batchPercentSlider" min="1" max="400" value="100" style="width: 100%;">
+                            <span id="batchPercentValue">100%</span>
+                        </div>
+                        <div class="control-row">
+                            <label>الأبعاد:</label>
+                            <div class="dimensions-inputs">
+                                <input type="number" id="batchWidthInput" min="1" placeholder="العرض">
+                                <input type="number" id="batchHeightInput" min="1" placeholder="الارتفاع">
+                            </div>
+                        </div>
+                        <div class="info-row" style="font-size: 0.78rem; color: #888;">اترك الأبعاد فارغة لاستخدام النسبة، أو حدد بُعدًا واحدًا للحفاظ على تناسق كل صورة، أو الاثنين لفرض نفس المقاس على الكل.</div>
+                    </div>
+
+                    <div class="control-group" id="batchGroupFormat">
+                        <h3 class="group-header">
+                            الصيغة والجودة
+                            <label class="group-toggle">
+                                <input type="checkbox" id="batchFormatEnable">
+                            </label>
+                        </h3>
+                        <div class="control-row">
+                            <label for="batchFormatSelect">تحويل إلى:</label>
+                            <select id="batchFormatSelect">
+                                <option value="jpeg">JPEG</option>
+                                <option value="webp">WEBP</option>
+                                <option value="png">PNG</option>
+                                <option value="avif">AVIF</option>
+                            </select>
+                        </div>
+                        <div id="batchQualityControl">
+                            <div class="control-row">
+                                <label for="batchQualitySlider">الجودة:</label>
+                                <input type="range" id="batchQualitySlider" min="1" max="100" value="100" style="width: 100%;">
+                                <span id="batchQualityValue">100%</span>
+                            </div>
+                        </div>
+                        <div class="control-row" id="batchBgColorControl" style="flex-wrap: nowrap; gap: 8px;">
+                            <label style="white-space: nowrap; flex-basis: auto; flex-shrink: 0;">لون الخلفية:</label>
+                            <button type="button" class="bg-preset-btn" id="batchBgTransparentBtn" data-color="transparent" title="شفاف" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; cursor: pointer;"></button>
+                            <button type="button" class="bg-preset-btn" id="batchBgWhiteBtn" data-color="#ffffff" title="أبيض" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; cursor: pointer;"></button>
+                            <button type="button" class="bg-preset-btn" id="batchBgBlackBtn" data-color="#000000" title="أسود" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; cursor: pointer;"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="batchActionsContainer" style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
+                    <button id="batchDownloadButton" class="action-btn primary">
+                        <span class="spinner"></span><span class="btn-text">تحويل وتنزيل</span>
+                    </button>
+                    <button id="batchResetButton" class="action-btn secondary">
+                        <span class="btn-text">إلغاء</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -490,8 +605,40 @@
         const flipHBtn = document.getElementById('flip-h');
         const flipVBtn = document.getElementById('flip-v');
 
+        // --- Batch mode elements ---
+        const batchEditorView = document.getElementById('batchEditorView');
+        const batchCountLabel = document.getElementById('batchCountLabel');
+        const batchThumbsGrid = document.getElementById('batchThumbsGrid');
+        const batchGroupTransform = document.getElementById('batchGroupTransform');
+        const batchGroupDimensions = document.getElementById('batchGroupDimensions');
+        const batchGroupFormat = document.getElementById('batchGroupFormat');
+        const batchTransformEnable = document.getElementById('batchTransformEnable');
+        const batchDimensionsEnable = document.getElementById('batchDimensionsEnable');
+        const batchFormatEnable = document.getElementById('batchFormatEnable');
+        const batchFlipHBtn = document.getElementById('batch-flip-h');
+        const batchFlipVBtn = document.getElementById('batch-flip-v');
+        const batchTransformStatus = document.getElementById('batchTransformStatus');
+        const batchPercentRow = document.getElementById('batchPercentRow');
+        const batchPercentSlider = document.getElementById('batchPercentSlider');
+        const batchPercentValue = document.getElementById('batchPercentValue');
+        const batchWidthInput = document.getElementById('batchWidthInput');
+        const batchHeightInput = document.getElementById('batchHeightInput');
+        const batchFormatSelect = document.getElementById('batchFormatSelect');
+        const batchQualityControl = document.getElementById('batchQualityControl');
+        const batchBgColorControl = document.getElementById('batchBgColorControl');
+        const batchQualitySlider = document.getElementById('batchQualitySlider');
+        const batchQualityValue = document.getElementById('batchQualityValue');
+        const batchBgTransparentBtn = document.getElementById('batchBgTransparentBtn');
+        const batchBgWhiteBtn = document.getElementById('batchBgWhiteBtn');
+        const batchBgBlackBtn = document.getElementById('batchBgBlackBtn');
+        const batchDownloadButton = document.getElementById('batchDownloadButton');
+        const batchResetButton = document.getElementById('batchResetButton');
+
         // --- App State ---
         let singleFileData = {};
+        let batchFiles = [];
+        let batchScaleH = 1, batchScaleV = 1;
+        let batchSelectedBgSource = 'transparent';
         let cropper = null;
         let rotation = 0;
         let scaleH = 1;
@@ -512,22 +659,27 @@
         fileInput.addEventListener('change', handleFileInputChange);
 
         function handleFiles(files) {
-            if (!files.length || files.length > 1) {
-                showToast('يرجى رفع صورة واحدة فقط.');
-                return;
-            }
-            
-            const file = files[0];
-            const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
-            if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.heic') && !isSvgFile) {
-                showToast('يرجى اختيار ملف صورة صالح.');
+            if (!files.length) return;
+
+            const fileArray = Array.from(files);
+            const isValidFile = (file) => {
+                const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+                return file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.heic') || isSvgFile;
+            };
+            if (fileArray.some(f => !isValidFile(f))) {
+                showToast('يرجى اختيار ملفات صور صالحة فقط.');
                 return;
             }
 
             document.querySelector('.app-header').style.display = 'none';
             uploadArea.style.display = 'none';
             imageEditor.style.display = 'block';
-            setupSingleFileEditor(file);
+
+            if (fileArray.length === 1) {
+                setupSingleFileEditor(fileArray[0]);
+            } else {
+                setupBatchEditor(fileArray);
+            }
         }
         
         function setupSingleFileEditor(file) {
@@ -610,7 +762,7 @@
             scaleBtns.forEach(b => b.classList.toggle('active', singleFileData.isSvg && b.dataset.scale === '2'));
             widthInput.value = originalWidth; heightInput.value = originalHeight;
             singleFileData.currentWidth = originalWidth; singleFileData.currentHeight = originalHeight;
-            originalDimensions.textContent = `${originalWidth}x${originalHeight}`;
+            originalDimensions.textContent = `${originalHeight}x${originalWidth}`;
             singleFileData.isRatioLocked = true;
             aspectLock.querySelector('.lock-icon-closed').style.display = 'block';
             aspectLock.querySelector('.lock-icon-open').style.display = 'none';
@@ -944,6 +1096,8 @@
 
         makeEditableOnClick(percentValue, percentSlider, { min: 1, max: 400 });
         makeEditableOnClick(qualityValue, qualitySlider, { min: 1, max: 100 });
+        makeEditableOnClick(batchPercentValue, batchPercentSlider, { min: 1, max: 400 });
+        makeEditableOnClick(batchQualityValue, batchQualitySlider, { min: 1, max: 100 });
         
         // --- AVIF encoding (via jSquash WASM, loaded lazily on first use) ---
         let avifEncoderPromise = null;
@@ -1136,6 +1290,7 @@
             if(cropper) cropper.destroy(); cropper = null;
             imageEditor.style.display = 'none';
             singleEditorView.style.display = 'none';
+            batchEditorView.style.display = 'none';
             editorView.classList.remove('hidden');
             cropperView.classList.add('hidden');
             uploadArea.style.display = 'flex';
@@ -1144,12 +1299,265 @@
             appIcon.style.display = 'flex';
             fileInput.value = '';
             singleFileData = {};
+            batchFiles = [];
+            if (batchThumbsGrid) batchThumbsGrid.innerHTML = '';
         };
         
         downloadButton.addEventListener('click', () => {
             if (singleFileData.originalImage) downloadSingleFile();
         });
         resetButton.addEventListener('click', resetApp);
+
+        // ================= BATCH MODE =================
+
+        function loadFileAsImage(file) {
+            return new Promise((resolve, reject) => {
+                const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+                const isHeic = file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic');
+                const finish = (dataUrl) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ img, isSvg: isSvgFile });
+                    img.onerror = reject;
+                    img.src = dataUrl;
+                };
+                if (isHeic) {
+                    heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+                        .then(res => new Promise((res2, rej2) => {
+                            const reader = new FileReader();
+                            reader.onload = e => res2(e.target.result);
+                            reader.onerror = rej2;
+                            reader.readAsDataURL(res);
+                        }))
+                        .then(finish)
+                        .catch(reject);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = e => finish(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        async function setupBatchEditor(files) {
+            batchEditorView.style.display = 'block';
+            batchThumbsGrid.innerHTML = '';
+            batchFiles = [];
+            batchCountLabel.textContent = `جارٍ تحميل ${files.length} صورة...`;
+
+            let idCounter = 0;
+            for (const file of files) {
+                try {
+                    const { img, isSvg } = await loadFileAsImage(file);
+                    const entry = {
+                        id: idCounter++,
+                        name: file.name,
+                        type: file.type || 'image/jpeg',
+                        isSvg,
+                        originalImage: img,
+                        originalWidth: img.width,
+                        originalHeight: img.height,
+                        aspectRatio: img.width / img.height,
+                        hasAlphaChannel: detectRealTransparency(img)
+                    };
+                    batchFiles.push(entry);
+                    addBatchThumb(entry);
+                } catch (err) {
+                    console.error('Failed to load file in batch:', file.name, err);
+                }
+            }
+            batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+            resetBatchControls();
+        }
+
+        function addBatchThumb(entry) {
+            const div = document.createElement('div');
+            div.className = 'batch-thumb';
+            div.dataset.id = entry.id;
+            const img = document.createElement('img');
+            img.src = entry.originalImage.src;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-thumb';
+            removeBtn.textContent = '×';
+            removeBtn.title = 'إزالة';
+            removeBtn.addEventListener('click', () => {
+                batchFiles = batchFiles.filter(f => f.id !== entry.id);
+                div.remove();
+                batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+                if (batchFiles.length === 0) resetApp();
+                else toggleBatchQualityControl();
+            });
+            div.appendChild(img);
+            div.appendChild(removeBtn);
+            batchThumbsGrid.appendChild(div);
+        }
+
+        function resetBatchControls() {
+            batchScaleH = 1; batchScaleV = 1;
+            batchTransformEnable.checked = false;
+            batchDimensionsEnable.checked = false;
+            batchFormatEnable.checked = false;
+            batchPercentSlider.value = 100;
+            batchPercentValue.textContent = '100%';
+            batchWidthInput.value = '';
+            batchHeightInput.value = '';
+            batchFormatSelect.value = 'jpeg';
+            batchQualitySlider.value = 100;
+            batchQualityValue.textContent = '100%';
+            batchSelectedBgSource = batchFormatSelect.value === 'jpeg' ? 'white' : 'transparent';
+            updateBatchTransformStatus();
+            updateBatchGroupState();
+            updateBatchDimensionModeUI();
+            toggleBatchQualityControl();
+        }
+
+        function updateBatchGroupState() {
+            batchGroupTransform.classList.toggle('group-disabled', !batchTransformEnable.checked);
+            batchGroupDimensions.classList.toggle('group-disabled', !batchDimensionsEnable.checked);
+            batchGroupFormat.classList.toggle('group-disabled', !batchFormatEnable.checked);
+        }
+        [batchTransformEnable, batchDimensionsEnable, batchFormatEnable].forEach(cb => cb.addEventListener('change', updateBatchGroupState));
+
+        function updateBatchTransformStatus() {
+            batchTransformStatus.innerHTML = `قلب أفقي : <span style="font-weight:700;">${batchScaleH === -1 ? 'نعم' : 'لا'}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;قلب عمودي : <span style="font-weight:700;">${batchScaleV === -1 ? 'نعم' : 'لا'}</span>`;
+        }
+        batchFlipHBtn.addEventListener('click', () => { batchScaleH *= -1; updateBatchTransformStatus(); batchTransformEnable.checked = true; updateBatchGroupState(); });
+        batchFlipVBtn.addEventListener('click', () => { batchScaleV *= -1; updateBatchTransformStatus(); batchTransformEnable.checked = true; updateBatchGroupState(); });
+
+        function updateBatchDimensionModeUI() {
+            const useFixed = !!(batchWidthInput.value || batchHeightInput.value);
+            batchPercentSlider.disabled = useFixed;
+            batchPercentRow.style.opacity = useFixed ? '0.4' : '1';
+        }
+        batchPercentSlider.addEventListener('input', () => {
+            batchPercentValue.textContent = `${batchPercentSlider.value}%`;
+            batchDimensionsEnable.checked = true; updateBatchGroupState();
+        });
+        batchWidthInput.addEventListener('input', () => { updateBatchDimensionModeUI(); batchDimensionsEnable.checked = true; updateBatchGroupState(); });
+        batchHeightInput.addEventListener('input', () => { updateBatchDimensionModeUI(); batchDimensionsEnable.checked = true; updateBatchGroupState(); });
+
+        function toggleBatchQualityControl() {
+            const isLossy = ['jpeg', 'webp', 'avif'].includes(batchFormatSelect.value);
+            const isPng = batchFormatSelect.value === 'png';
+            batchQualityControl.classList.toggle('hidden', !isLossy && !isPng);
+            const noneHaveAlpha = batchFiles.length > 0 && batchFiles.every(f => !f.hasAlphaChannel);
+            batchBgColorControl.classList.toggle('hidden', noneHaveAlpha);
+            const supportsTransparency = batchFormatSelect.value !== 'jpeg';
+            batchBgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
+            if (!supportsTransparency && batchSelectedBgSource === 'transparent') {
+                batchSelectedBgSource = 'white';
+            }
+            updateBatchBgPresetSelection();
+        }
+        batchFormatSelect.addEventListener('change', () => {
+            batchSelectedBgSource = batchFormatSelect.value === 'jpeg' ? 'white' : 'transparent';
+            toggleBatchQualityControl(); batchFormatEnable.checked = true; updateBatchGroupState();
+        });
+        batchQualitySlider.addEventListener('input', () => {
+            batchQualityValue.textContent = `${batchQualitySlider.value}%`;
+            batchFormatEnable.checked = true; updateBatchGroupState();
+        });
+
+        function updateBatchBgPresetSelection() {
+            batchBgTransparentBtn.classList.toggle('selected', batchSelectedBgSource === 'transparent');
+            batchBgWhiteBtn.classList.toggle('selected', batchSelectedBgSource === 'white');
+            batchBgBlackBtn.classList.toggle('selected', batchSelectedBgSource === 'black');
+        }
+        batchBgTransparentBtn.addEventListener('click', () => { batchSelectedBgSource = 'transparent'; updateBatchBgPresetSelection(); batchFormatEnable.checked = true; updateBatchGroupState(); });
+        batchBgWhiteBtn.addEventListener('click', () => { batchSelectedBgSource = 'white'; updateBatchBgPresetSelection(); batchFormatEnable.checked = true; updateBatchGroupState(); });
+        batchBgBlackBtn.addEventListener('click', () => { batchSelectedBgSource = 'black'; updateBatchBgPresetSelection(); batchFormatEnable.checked = true; updateBatchGroupState(); });
+
+        function resolveBatchBgColor() {
+            if (batchSelectedBgSource === 'transparent') return null;
+            return batchSelectedBgSource === 'white' ? '#FFFFFF' : '#000000';
+        }
+
+        const setBatchDownloadLoading = (isLoading) => {
+            batchDownloadButton.classList.toggle('loading', isLoading);
+            batchResetButton.disabled = isLoading;
+        };
+
+        async function downloadBatchFiles() {
+            if (!batchFiles.length) return;
+            setBatchDownloadLoading(true);
+
+            const applyTransform = batchTransformEnable.checked;
+            const applyDimensions = batchDimensionsEnable.checked;
+            const applyFormat = batchFormatEnable.checked;
+
+            const fixedW = parseInt(batchWidthInput.value, 10) || 0;
+            const fixedH = parseInt(batchHeightInput.value, 10) || 0;
+            const percent = parseInt(batchPercentSlider.value, 10) || 100;
+
+            const outFormat = applyFormat ? batchFormatSelect.value : null;
+            const outQuality = applyFormat ? (parseInt(batchQualitySlider.value, 10) / 100) : undefined;
+            const outBg = applyFormat ? resolveBatchBgColor() : null;
+
+            const zip = new JSZip();
+            const usedNames = new Set();
+            let failedCount = 0;
+
+            for (const entry of batchFiles) {
+                const transform = applyTransform
+                    ? { rotation: 0, scaleH: batchScaleH, scaleV: batchScaleV }
+                    : { rotation: 0, scaleH: 1, scaleV: 1 };
+
+                let targetW = entry.originalWidth, targetH = entry.originalHeight;
+                if (applyDimensions) {
+                    if (fixedW && fixedH) {
+                        targetW = fixedW; targetH = fixedH;
+                    } else if (fixedW) {
+                        targetW = fixedW; targetH = Math.round(fixedW / entry.aspectRatio);
+                    } else if (fixedH) {
+                        targetH = fixedH; targetW = Math.round(fixedH * entry.aspectRatio);
+                    } else {
+                        targetW = Math.round(entry.originalWidth * percent / 100);
+                        targetH = Math.round(entry.originalHeight * percent / 100);
+                    }
+                }
+
+                const rawSubtype = (entry.type.split('/')[1] || 'jpeg').toLowerCase();
+                const nonEncodableFormats = { 'svg+xml': 'png', heic: 'jpeg', heif: 'jpeg', jpg: 'jpeg', gif: 'png', bmp: 'png' };
+                const entryFormat = outFormat || nonEncodableFormats[rawSubtype] || rawSubtype;
+                const entryQuality = applyFormat ? outQuality : (entryFormat === 'jpeg' ? 0.92 : undefined);
+                const entryBg = applyFormat
+                    ? (entryFormat === 'jpeg' ? (outBg || '#FFFFFF') : outBg)
+                    : (entryFormat === 'jpeg' && entry.hasAlphaChannel ? '#FFFFFF' : null);
+
+                let blob;
+                try {
+                    blob = await processImage(entry.originalImage, targetW, targetH, entryFormat, entryQuality, transform, entryBg);
+                } catch (err) {
+                    console.error('Batch processing failed for', entry.name, err);
+                    blob = null;
+                }
+                if (!blob) { failedCount++; continue; }
+
+                const baseName = entry.name.split('.').slice(0, -1).join('.') || entry.name;
+                let fileName = `${baseName}.${entryFormat}`;
+                let i = 1;
+                while (usedNames.has(fileName)) { fileName = `${baseName}_${i++}.${entryFormat}`; }
+                usedNames.add(fileName);
+                zip.file(fileName, blob);
+            }
+
+            try {
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                triggerDownload(URL.createObjectURL(zipBlob), 'الصور_المعدلة.zip');
+            } catch (err) {
+                console.error('ZIP generation failed:', err);
+                showToast('فشل إنشاء ملف ZIP.');
+            }
+
+            if (failedCount > 0) {
+                showToast(`تعذّرت معالجة ${failedCount} صورة (على الأغلب بسبب حجمها الكبير جدًا).`);
+            }
+            setBatchDownloadLoading(false);
+        }
+
+        batchDownloadButton.addEventListener('click', downloadBatchFiles);
+        batchResetButton.addEventListener('click', resetApp);
     });
     </script>
     
