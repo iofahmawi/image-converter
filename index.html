@@ -1314,11 +1314,22 @@
             return out;
         }
 
+        // يحوّل نسبة الجودة (1-99) إلى عدد ألوان اللوحة، على مرحلتين:
+        // 50-99%: تحكم دقيق بلون واحد لكل نسبة (207 إلى 256 بالضبط) لضمان إمكانية الوصول لأي رقم بما فيها 254 و255 و256
+        // 1-49%: منحنى تربيعي سلس ينزل من 207 إلى 4 لون، بخطوات أدق كل ما اقتربنا من 4 (حيث الفرق البصري بين لون ولون أوضح)
+        function pngColorsFromQualityPercent(qualityPercent) {
+            if (qualityPercent >= 50) {
+                return qualityPercent + 157; // 50 -> 207 ... 99 -> 256
+            }
+            const s = (qualityPercent - 1) / 48; // 0 عند 1%، 1 عند 49%
+            return Math.max(4, Math.round(4 + 203 * s * s));
+        }
+
         async function encodeCanvasToCompressedPng(canvas, quality, precise = true) {
             const ctx = canvas.getContext('2d');
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             // نربط شريط الضغط بعدد ألوان اللوحة: 100% = بدون ضغط (استُبعد قبل الوصول هنا)، وكل ما قلّت النسبة قلّ عدد الألوان والحجم
-            const colors = Math.max(4, Math.round(quality * 256));
+            const colors = pngColorsFromQualityPercent(Math.round(quality * 100));
 
             if (precise) {
                 // مسار الحفظ النهائي: توليد لوحة دقيقة + تمويه Floyd-Steinberg لتقليل التدرجات اللونية الظاهرة
