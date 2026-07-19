@@ -871,9 +871,10 @@
 
         // --- إزالة الخلفية بالذكاء الاصطناعي (تعمل بالكامل داخل المتصفح، بدون إرسال أي بيانات لسيرفر) ---
         let removeBgModulePromise = null;
+        const REMOVE_BG_CDN_BASE = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/dist/';
         function loadRemoveBgModule() {
             if (!removeBgModulePromise) {
-                removeBgModulePromise = import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.9/+esm');
+                removeBgModulePromise = import(REMOVE_BG_CDN_BASE + 'index.mjs');
             }
             return removeBgModulePromise;
         }
@@ -902,10 +903,10 @@
             removeBgBtn.disabled = true;
             try {
                 const mod = await loadRemoveBgModule();
-                const removeBackground = mod.default;
+                const removeBackground = mod.removeBackground || mod.default;
                 const sourceCanvas = buildTransformedCanvas();
                 const sourceBlob = await new Promise(resolve => sourceCanvas.toBlob(resolve, 'image/png'));
-                const resultBlob = await removeBackground(sourceBlob);
+                const resultBlob = await removeBackground(sourceBlob, { publicPath: REMOVE_BG_CDN_BASE });
                 const url = URL.createObjectURL(resultBlob);
                 const img = new Image();
                 img.onload = () => {
