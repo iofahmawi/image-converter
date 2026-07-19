@@ -288,11 +288,12 @@
 
         #actionsContainer, #cropActions { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
         .action-btn {
-            flex: 1; color: white; padding: 0; height: 44px; line-height: 44px;
+            flex: 1; color: white; padding: 0; height: 44px;
             border-radius: 8px; cursor: pointer; font-weight: 700; border: none;
             transition: background-color 0.3s, opacity 0.3s;
             text-align: center; position: relative;
             font-size: 1em;
+            display: flex; align-items: center; justify-content: center;
         }
         
         #cropActions .action-btn {
@@ -303,19 +304,38 @@
         
         .action-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; }
         
-        .action-btn .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 3px solid #fff;
-            width: 20px; height: 20px; animation: spin 1s linear infinite;
-            position: absolute; left: 50%; top: 50%; margin-left: -10px; margin-top: -10px; display: none;
+        .action-btn .btn-loading-text { display: none; align-items: center; justify-content: center; gap: 6px; vertical-align: middle; }
+        .action-btn.loading .btn-loading-text { display: inline-flex; }
+        .action-btn.loading .btn-text { display: none; }
+        .dot-loader { display: inline-flex; gap: 3px; vertical-align: middle; }
+        .dot-loader span {
+            width: 3px; height: 3px; border-radius: 50%; background: currentColor;
+            opacity: 0;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .action-btn.loading .spinner { display: block; }
-        .action-btn.loading .btn-text { opacity: 0; }
+        .dot-loader span:nth-child(1) { animation: dotStep1 1.2s linear infinite; }
+        .dot-loader span:nth-child(2) { animation: dotStep2 1.2s linear infinite; }
+        .dot-loader span:nth-child(3) { animation: dotStep3 1.2s linear infinite; }
+        @keyframes dotStep1 {
+            0%, 74% { opacity: 1; }
+            75%, 100% { opacity: 0; }
+        }
+        @keyframes dotStep2 {
+            0%, 24% { opacity: 0; }
+            25%, 74% { opacity: 1; }
+            75%, 100% { opacity: 0; }
+        }
+        @keyframes dotStep3 {
+            0%, 49% { opacity: 0; }
+            50%, 74% { opacity: 1; }
+            75%, 100% { opacity: 0; }
+        }
 
         .action-btn.primary { background-color: var(--primary-color); }
-        .action-btn.primary:hover:not(:disabled) { background-color: var(--primary-hover); }
         .action-btn.secondary { background-color: var(--secondary-color); }
-        .action-btn.secondary:hover:not(:disabled) { background-color: var(--secondary-hover); }
+        @media (hover: hover) {
+            .action-btn.primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+            .action-btn.secondary:hover:not(:disabled) { background-color: var(--secondary-hover); }
+        }
         
         .hidden { display: none !important; }
 
@@ -496,14 +516,15 @@
                                 </div>
                             </div>
                             <div id="estimatedSizeRow" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 28px;">
-                                الحجم المتوقع : <span id="estimatedSizeText">—</span>
+                                <span id="estimatedSizeLabelWrap">الحجم المتوقع : <span id="estimatedSizeText">—</span></span>
+                                <span id="avifLoadingNotice" class="hidden">جارٍ تحميل ترميز AVIF لأول مرة...</span>
                             </div>
                         </div>
                     </div>
                     
                     <div id="actionsContainer">
                         <button id="downloadButton" class="action-btn primary">
-                            <span class="spinner"></span><span class="btn-text">تحويل وتنزيل</span>
+                            <span class="btn-text">تحويل وتنزيل</span><span class="btn-loading-text">جارٍ التحويل<span class="dot-loader"><span></span><span></span><span></span></span></span>
                         </button>
                         <button id="resetButton" class="action-btn secondary">
                             <span class="btn-text">إلغاء</span>
@@ -593,7 +614,7 @@
 
                 <div id="batchActionsContainer" style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
                     <button id="batchDownloadButton" class="action-btn primary">
-                        <span class="spinner"></span><span class="btn-text">تحويل وتنزيل</span>
+                        <span class="btn-text">تحويل وتنزيل</span><span class="btn-loading-text">جارٍ التحويل<span class="dot-loader"><span></span><span></span><span></span></span></span>
                     </button>
                     <button id="batchResetButton" class="action-btn secondary">
                         <span class="btn-text">إلغاء</span>
@@ -640,6 +661,8 @@
         const qualityValue = document.getElementById('qualityValue');
         const estimatedSizeText = document.getElementById('estimatedSizeText');
         const estimatedSizeRow = document.getElementById('estimatedSizeRow');
+        const estimatedSizeLabelWrap = document.getElementById('estimatedSizeLabelWrap');
+        const avifLoadingNotice = document.getElementById('avifLoadingNotice');
         const actionsContainer = document.getElementById('actionsContainer');
         const downloadButton = document.getElementById('downloadButton');
         const resetButton = document.getElementById('resetButton');
@@ -1170,12 +1193,29 @@
         
         // --- AVIF encoding (via jSquash WASM, loaded lazily on first use) ---
         let avifEncoderPromise = null;
+        function showAvifLoadingNotice(show) {
+            if (singleEditorView.style.display !== 'none') {
+                estimatedSizeLabelWrap.classList.toggle('hidden', show);
+                avifLoadingNotice.classList.toggle('hidden', !show);
+            } else if (show) {
+                showToast('جارٍ تحميل ترميز AVIF لأول مرة...');
+            }
+        }
         function getAvifEncoder() {
             if (!avifEncoderPromise) {
-                showToast('جارٍ تحميل ترميز AVIF لأول مرة...');
+                showAvifLoadingNotice(true);
+                const noticeShownAt = Date.now();
                 avifEncoderPromise = import('https://esm.sh/@jsquash/avif@2.1.1')
                     .then(mod => mod.encode)
-                    .catch(err => { avifEncoderPromise = null; throw err; });
+                    .catch(err => { avifEncoderPromise = null; throw err; })
+                    .finally(async () => {
+                        const elapsed = Date.now() - noticeShownAt;
+                        const minDisplayMs = 2000;
+                        if (elapsed < minDisplayMs) {
+                            await new Promise(resolve => setTimeout(resolve, minDisplayMs - elapsed));
+                        }
+                        showAvifLoadingNotice(false);
+                    });
             }
             return avifEncoderPromise;
         }
@@ -1545,6 +1585,7 @@
         const setDownloadButtonLoading = (isLoading) => {
             downloadButton.classList.toggle('loading', isLoading);
             resetButton.disabled = isLoading;
+            if (!isLoading) downloadButton.blur();
         };
 
         // يجبر المتصفح يعيد الرسم (يظهر دائرة التحميل) قبل ما يبدأ بعملية ترميز ثقيلة تجمّد الخيط الرئيسي (مثل AVIF)
@@ -1781,6 +1822,7 @@
         const setBatchDownloadLoading = (isLoading) => {
             batchDownloadButton.classList.toggle('loading', isLoading);
             batchResetButton.disabled = isLoading;
+            if (!isLoading) batchDownloadButton.blur();
         };
 
         async function downloadBatchFiles() {
