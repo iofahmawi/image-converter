@@ -254,6 +254,36 @@
             fill: currentColor;
             vertical-align: middle;
         }
+        #toastContainer {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: calc(100% - 32px);
+            max-width: 400px;
+            pointer-events: none;
+        }
+        .toast {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 13px 18px;
+            border-radius: 10px;
+            font-size: 0.92em;
+            line-height: 1.5;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            max-width: 100%;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background-color: #c0392b; }
         #crop-mode-btn { width: auto; padding: 0 15px; font-size: 1em; }
 
         #actionsContainer, #cropActions { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
@@ -660,7 +690,19 @@
         let sizeEstimateTimer = null;
         
         const MEMORY_LIMIT_BYTES = 256 * 1024 * 1024;
-        const showToast = (message) => alert(message);
+        const showToast = (message, type = 'info') => {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast' + (type === 'error' ? ' error' : '');
+            toast.textContent = message;
+            container.appendChild(toast);
+            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+            const duration = type === 'error' ? 4000 : 3000;
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+            }, duration);
+        };
         
         // --- File Handling ---
         const handleFileDrop = (e) => { e.preventDefault(); e.stopPropagation(); uploadArea.classList.remove('dragging'); handleFiles(e.dataTransfer.files); };
@@ -707,7 +749,7 @@
                     if (attempt < 3) {
                         setupSingleFileEditor(file, attempt + 1);
                     } else {
-                        showToast('تعذر تحميل الصورة، يرجى المحاولة مرة أخرى.');
+                        showToast('تعذر تحميل الصورة، يرجى المحاولة مرة أخرى.', 'error');
                         resetApp();
                     }
                 };
@@ -729,7 +771,7 @@
                         if (attempt < 3) {
                             setupSingleFileEditor(file, attempt + 1);
                         } else {
-                            showToast('فشل تحويل HEIC.');
+                            showToast('فشل تحويل HEIC.', 'error');
                             resetApp();
                         }
                     });
@@ -822,7 +864,7 @@
             const croppedCanvas = cropper.getCroppedCanvas({
                 imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
             });
-            if (!croppedCanvas) { showToast('فشل قص الصورة.'); return; }
+            if (!croppedCanvas) { showToast('فشل قص الصورة.', 'error'); return; }
 
             const dataUrl = croppedCanvas.toDataURL(singleFileData.type);
             const img = new Image();
@@ -1453,7 +1495,7 @@
                     return await encodeCanvasToAvif(canvas, quality ?? 0.75);
                 } catch (err) {
                     console.error('AVIF encode failed:', err);
-                    showToast('فشل ترميز AVIF، تحقق من الاتصال بالإنترنت.');
+                    showToast('فشل ترميز AVIF، تحقق من الاتصال بالإنترنت.', 'error');
                     return null;
                 }
             }
@@ -1474,6 +1516,7 @@
         async function downloadSingleFile() {
             if (!singleFileData.originalImage) return;
             setDownloadButtonLoading(true);
+            await waitForPaint();
 
             const { originalImage, currentWidth, currentHeight, name } = singleFileData;
             const format = formatSelect.value;
@@ -1490,7 +1533,7 @@
                 const newFileName = `${baseFileName}_${finalW}x${finalH}.${format}`;
                 triggerDownload(URL.createObjectURL(blob), newFileName);
             } else {
-                showToast(`فشل التحويل.`);
+                showToast('فشل التحويل.', 'error');
             }
             setDownloadButtonLoading(false);
         }
@@ -1499,6 +1542,11 @@
             downloadButton.classList.toggle('loading', isLoading);
             resetButton.disabled = isLoading;
         };
+
+        // يجبر المتصفح يعيد الرسم (يظهر دائرة التحميل) قبل ما يبدأ بعملية ترميز ثقيلة تجمّد الخيط الرئيسي (مثل AVIF)
+        function waitForPaint() {
+            return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
 
         const triggerDownload = (url, name) => {
             const a = document.createElement('a');
@@ -1734,6 +1782,7 @@
         async function downloadBatchFiles() {
             if (!batchFiles.length) return;
             setBatchDownloadLoading(true);
+            await waitForPaint();
 
             const applyTransform = batchTransformEnable.checked;
             const applyDimensions = batchDimensionsEnable.checked;
@@ -1800,7 +1849,7 @@
                 triggerDownload(URL.createObjectURL(zipBlob), 'الصور_المعدلة.zip');
             } catch (err) {
                 console.error('ZIP generation failed:', err);
-                showToast('فشل إنشاء ملف ZIP.');
+                showToast('فشل إنشاء ملف ZIP.', 'error');
             }
 
             if (failedCount > 0) {
@@ -1818,5 +1867,6 @@
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(registration => { console.log('SW registration successful:', registration.scope); }).catch(err => { console.log('SW registration failed:', err); }); }); }
   </script>
   
+    <div id="toastContainer"></div>
 </body>
 </html>
