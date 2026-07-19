@@ -226,9 +226,21 @@
             align-items: center;
             transition: background-color 0.2s, color 0.2s;
         }
-        .transform-btn:hover {
+        @media (hover: hover) and (pointer: fine) {
+            .transform-btn:hover {
+                background-color: var(--secondary-color);
+                color: white;
+            }
+            .transform-btn:hover svg {
+                fill: white;
+            }
+        }
+        .transform-btn:active {
             background-color: var(--secondary-color);
             color: white;
+        }
+        .transform-btn:active svg {
+            fill: white;
         }
         .transform-btn svg {
             width: 22px;
@@ -241,9 +253,6 @@
             height: 24px;
             fill: currentColor;
             vertical-align: middle;
-        }
-        .transform-btn:hover svg {
-            fill: white;
         }
         #crop-mode-btn { width: auto; padding: 0 15px; font-size: 1em; }
 
