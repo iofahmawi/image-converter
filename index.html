@@ -496,6 +496,7 @@
                                     <option value="webp">WEBP</option>
                                     <option value="png">PNG</option>
                                     <option value="avif">AVIF</option>
+                                    <option value="ico">ICO</option>
                                 </select>
                             </div>
                             <div id="qualityControl">
@@ -594,6 +595,7 @@
                                 <option value="webp">WEBP</option>
                                 <option value="png">PNG</option>
                                 <option value="avif">AVIF</option>
+                                <option value="ico">ICO</option>
                             </select>
                         </div>
                         <div id="batchQualityControl">
@@ -1512,6 +1514,40 @@
         });
 
         // --- Download Logic ---
+        async function encodeCanvasToIco(canvas) {
+            const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!pngBlob) return null;
+            const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+
+            // حقل العرض/الارتفاع بايت واحد فقط، والقيمة 0 تعني 256 بكسل
+            const dirWidth = canvas.width >= 256 ? 0 : canvas.width;
+            const dirHeight = canvas.height >= 256 ? 0 : canvas.height;
+
+            const HEADER_SIZE = 6;
+            const ENTRY_SIZE = 16;
+            const dataOffset = HEADER_SIZE + ENTRY_SIZE;
+            const buffer = new ArrayBuffer(dataOffset + pngBytes.length);
+            const view = new DataView(buffer);
+
+            // ICONDIR
+            view.setUint16(0, 0, true);  // reserved
+            view.setUint16(2, 1, true);  // type: 1 = icon
+            view.setUint16(4, 1, true);  // عدد الصور داخل الملف
+
+            // ICONDIRENTRY
+            view.setUint8(6, dirWidth);
+            view.setUint8(7, dirHeight);
+            view.setUint8(8, 0);          // عدد الألوان (0 = غير مستخدم)
+            view.setUint8(9, 0);          // reserved
+            view.setUint16(10, 1, true);  // planes
+            view.setUint16(12, 32, true); // bits per pixel
+            view.setUint32(14, pngBytes.length, true); // حجم بيانات الصورة
+            view.setUint32(18, dataOffset, true);      // إزاحة بيانات الصورة
+
+            new Uint8Array(buffer).set(pngBytes, dataOffset);
+            return new Blob([buffer], { type: 'image/x-icon' });
+        }
+
         async function processImage(image, newWidth, newHeight, format, quality, transform, bgColor, precise = true) {
             const isSideways = transform.rotation % 180 !== 0;
             const finalWidth = isSideways ? newHeight : newWidth;
@@ -1540,6 +1576,18 @@
                 } catch (err) {
                     console.error('AVIF encode failed:', err);
                     showToast('فشل ترميز AVIF، تحقق من الاتصال بالإنترنت.', 'error');
+                    return null;
+                }
+            }
+
+            if (format === 'ico') {
+                try {
+                    const icoBlob = await encodeCanvasToIco(canvas);
+                    if (!icoBlob) throw new Error('empty ico blob');
+                    return icoBlob;
+                } catch (err) {
+                    console.error('ICO encode failed:', err);
+                    showToast('فشل إنشاء ملف ICO.', 'error');
                     return null;
                 }
             }
