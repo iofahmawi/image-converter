@@ -359,7 +359,7 @@
             display: flex; align-items: center;
             cursor: pointer;
         }
-        .group-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-color); margin: 0; }
+        .group-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-hover); margin: 0; }
         .control-group.group-disabled .control-row,
         .control-group.group-disabled .info-row { opacity: 1; pointer-events: auto; }
         #batchThumbsGrid {
@@ -519,13 +519,14 @@
                             <div id="estimatedSizeRow" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 28px;">
                                 <span id="estimatedSizeLabelWrap">الحجم المتوقع : <span id="estimatedSizeText">—</span></span>
                                 <span id="avifLoadingNotice" class="hidden">جارٍ تحميل ترميز AVIF لأول مرة...</span>
+                                <span id="downloadingNotice" class="hidden">جارٍ التحويل <span class="dot-loader"><span></span><span></span><span></span></span></span>
                             </div>
                         </div>
                     </div>
                     
                     <div id="actionsContainer">
                         <button id="downloadButton" class="action-btn primary">
-                            <span class="btn-text">تحويل وتنزيل</span><span class="btn-loading-text">جارٍ التحويل<span class="dot-loader"><span></span><span></span><span></span></span></span>
+                            <span class="btn-text">تحويل وتنزيل</span>
                         </button>
                         <button id="resetButton" class="action-btn secondary">
                             <span class="btn-text">إلغاء</span>
@@ -611,12 +612,13 @@
                             <button type="button" class="bg-preset-btn" id="batchBgWhiteBtn" data-color="#ffffff" title="أبيض" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; cursor: pointer;"></button>
                             <button type="button" class="bg-preset-btn" id="batchBgBlackBtn" data-color="#000000" title="أسود" style="box-sizing: border-box; flex-shrink: 0; width: 33px; height: 33px; padding: 0; border-radius: 6px; border: 1px solid var(--border-color); background: #000000; cursor: pointer;"></button>
                         </div>
+                        <div id="batchDownloadingNotice" class="hidden" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 14px;">جارٍ التحويل <span class="dot-loader"><span></span><span></span><span></span></span></div>
                     </div>
                 </div>
 
                 <div id="batchActionsContainer" style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
                     <button id="batchDownloadButton" class="action-btn primary">
-                        <span class="btn-text">تحويل وتنزيل</span><span class="btn-loading-text">جارٍ التحويل<span class="dot-loader"><span></span><span></span><span></span></span></span>
+                        <span class="btn-text">تحويل وتنزيل</span>
                     </button>
                     <button id="batchResetButton" class="action-btn secondary">
                         <span class="btn-text">إلغاء</span>
@@ -665,6 +667,7 @@
         const estimatedSizeRow = document.getElementById('estimatedSizeRow');
         const estimatedSizeLabelWrap = document.getElementById('estimatedSizeLabelWrap');
         const avifLoadingNotice = document.getElementById('avifLoadingNotice');
+        const downloadingNotice = document.getElementById('downloadingNotice');
         const actionsContainer = document.getElementById('actionsContainer');
         const downloadButton = document.getElementById('downloadButton');
         const resetButton = document.getElementById('resetButton');
@@ -700,6 +703,7 @@
         const batchBgWhiteBtn = document.getElementById('batchBgWhiteBtn');
         const batchBgBlackBtn = document.getElementById('batchBgBlackBtn');
         const batchDownloadButton = document.getElementById('batchDownloadButton');
+        const batchDownloadingNotice = document.getElementById('batchDownloadingNotice');
         const batchResetButton = document.getElementById('batchResetButton');
 
         // --- App State ---
@@ -1631,8 +1635,9 @@
         }
         
         const setDownloadButtonLoading = (isLoading) => {
-            downloadButton.classList.toggle('loading', isLoading);
             resetButton.disabled = isLoading;
+            estimatedSizeLabelWrap.classList.toggle('hidden', isLoading);
+            downloadingNotice.classList.toggle('hidden', !isLoading);
             if (!isLoading) downloadButton.blur();
         };
 
@@ -1868,8 +1873,8 @@
         }
 
         const setBatchDownloadLoading = (isLoading) => {
-            batchDownloadButton.classList.toggle('loading', isLoading);
             batchResetButton.disabled = isLoading;
+            batchDownloadingNotice.classList.toggle('hidden', !isLoading);
             if (!isLoading) batchDownloadButton.blur();
         };
 
