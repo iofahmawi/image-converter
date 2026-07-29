@@ -102,6 +102,9 @@
         #uploadArea.dragging, #uploadArea:hover {
             border-color: var(--primary-color); background-color: #fffaf5;
         }
+        #pdfUploadLink:hover {
+            border-color: var(--primary-color) !important; background-color: #fffaf5;
+        }
         #uploadArea .primary-text { font-size: 1.11em; font-weight: 600; margin: 0 0 10px 0; }
         #uploadArea .secondary-text { font-size: 0.95em; color: #777; margin: 0 0 25px 0; }
         .upload-button {
@@ -420,7 +423,10 @@
             <p class="secondary-text">أو قم بسحب وإفلات الملفات في هذه المنطقة</p>
             <span class="upload-button">اختيار ملفات</span>
         </label>
-        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg, application/pdf, .pdf">
+        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg">
+
+        <label for="pdfFileInput" id="pdfUploadLink" style="display: block; margin: 18px 0 7px 0; padding: 10px 20px; border: 2px dashed #d0dbe2; border-radius: 12px; color: var(--primary-color); font-size: 0.9em; font-weight: 600; cursor: pointer; text-decoration: none; transition: border-color 0.3s, background-color 0.3s;">أو ارفع ملف PDF</label>
+        <input type="file" id="pdfFileInput" multiple accept="application/pdf, .pdf" style="display: none;">
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -662,8 +668,12 @@
         // --- DOM Elements ---
         const pageTitle = document.querySelector('h1');
         const appIcon = document.querySelector('.app-icon');
+        const appContainer = document.querySelector('.container');
+        appContainer.style.paddingBottom = '15px';
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
+        const pdfFileInput = document.getElementById('pdfFileInput');
+        const pdfUploadLink = document.getElementById('pdfUploadLink');
         const imageEditor = document.getElementById('imageEditor');
         const singleEditorView = document.getElementById('singleEditorView');
         
@@ -770,6 +780,7 @@
         ['dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.remove('dragging')));
         uploadArea.addEventListener('drop', handleFileDrop);
         fileInput.addEventListener('change', handleFileInputChange);
+        pdfFileInput.addEventListener('change', handleFileInputChange);
 
         const DEFAULT_PDF_SCALE = 4;
 
@@ -883,6 +894,8 @@
 
             document.querySelector('.app-header').style.display = 'none';
             uploadArea.style.display = 'none';
+            pdfUploadLink.style.display = 'none';
+            appContainer.style.paddingBottom = '';
             imageEditor.style.display = 'block';
 
             if (fileArray.length === 1) {
@@ -1819,6 +1832,8 @@
             editorView.classList.remove('hidden');
             cropperView.classList.add('hidden');
             uploadArea.style.display = 'flex';
+            pdfUploadLink.style.display = 'block';
+            appContainer.style.paddingBottom = '15px';
             document.querySelector('.app-header').style.display = 'flex';
             pageTitle.style.display = 'block';
             appIcon.style.display = 'flex';
