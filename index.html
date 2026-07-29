@@ -29,6 +29,15 @@
     <!-- Library to compress PNG via color quantization -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js"></script>
+    <!-- Library to render PDF files as images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+        });
+    </script>
     
     <style>
         .bg-preset-btn.selected {
@@ -411,7 +420,7 @@
             <p class="secondary-text">أو قم بسحب وإفلات الملفات في هذه المنطقة</p>
             <span class="upload-button">اختيار ملفات</span>
         </label>
-        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg">
+        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp, image/avif, image/bmp, .heic, image/heic, image/svg+xml, .svg, application/pdf, .pdf">
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -489,6 +498,15 @@
                         </div>
                         <div class="control-group">
                             <h3>الصيغة والجودة</h3>
+                            <div id="pdfResolutionRow" class="control-row hidden">
+                                <label for="pdfResolutionSelect">دقة PDF:</label>
+                                <select id="pdfResolutionSelect" class="custom-select-wrapper">
+                                    <option value="1">عادية</option>
+                                    <option value="2">جيدة</option>
+                                    <option value="4" selected>عالية</option>
+                                    <option value="6">فائقة</option>
+                                </select>
+                            </div>
                             <div class="control-row">
                                 <label for="formatSelect">تحويل إلى:</label>
                                 <select id="formatSelect" class="custom-select-wrapper">
@@ -599,6 +617,15 @@
                                 <option value="ico">ICO</option>
                             </select>
                         </div>
+                        <div id="batchPdfResolutionRow" class="control-row hidden">
+                            <label for="batchPdfResolutionSelect">دقة PDF:</label>
+                            <select id="batchPdfResolutionSelect">
+                                <option value="1">عادية</option>
+                                <option value="2">جيدة</option>
+                                <option value="4" selected>عالية</option>
+                                <option value="6">فائقة</option>
+                            </select>
+                        </div>
                         <div id="batchQualityControl">
                             <div class="control-row">
                                 <label for="batchQualitySlider">الجودة:</label>
@@ -662,6 +689,8 @@
         const formatSelect = document.getElementById('formatSelect');
         const qualityControl = document.getElementById('qualityControl');
         const qualitySlider = document.getElementById('qualitySlider');
+        const pdfResolutionRow = document.getElementById('pdfResolutionRow');
+        const pdfResolutionSelect = document.getElementById('pdfResolutionSelect');
         const qualityValue = document.getElementById('qualityValue');
         const estimatedSizeText = document.getElementById('estimatedSizeText');
         const estimatedSizeRow = document.getElementById('estimatedSizeRow');
@@ -696,6 +725,8 @@
         const batchHeightInput = document.getElementById('batchHeightInput');
         const batchFormatSelect = document.getElementById('batchFormatSelect');
         const batchQualityControl = document.getElementById('batchQualityControl');
+        const batchPdfResolutionRow = document.getElementById('batchPdfResolutionRow');
+        const batchPdfResolutionSelect = document.getElementById('batchPdfResolutionSelect');
         const batchBgColorControl = document.getElementById('batchBgColorControl');
         const batchQualitySlider = document.getElementById('batchQualitySlider');
         const batchQualityValue = document.getElementById('batchQualityValue');
@@ -742,10 +773,107 @@
         uploadArea.addEventListener('drop', handleFileDrop);
         fileInput.addEventListener('change', handleFileInputChange);
 
-        function handleFiles(files) {
+        const DEFAULT_PDF_SCALE = 4;
+
+        let cachedMaxCanvasDimension = null;
+
+        function detectMaxCanvasDimension() {
+            if (cachedMaxCanvasDimension) return cachedMaxCanvasDimension;
+            const candidateSizes = [16384, 8192, 4096, 2048];
+            for (const size of candidateSizes) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(size - 1, size - 1, 1, 1);
+                    const pixel = ctx.getImageData(size - 1, size - 1, 1, 1).data;
+                    if (pixel[0] === 255 && pixel[3] === 255) {
+                        cachedMaxCanvasDimension = size;
+                        return size;
+                    }
+                } catch (e) {
+                    // جرّب حجمًا أصغر
+                }
+            }
+            cachedMaxCanvasDimension = 2048;
+            return 2048;
+        }
+
+        function getSafeViewport(page, scale) {
+            let viewport = page.getViewport({ scale });
+            const maxDimension = detectMaxCanvasDimension();
+            if (viewport.width > maxDimension || viewport.height > maxDimension) {
+                const limitFactor = Math.min(maxDimension / viewport.width, maxDimension / viewport.height);
+                viewport = page.getViewport({ scale: scale * limitFactor });
+            }
+            return viewport;
+        }
+
+        async function renderPdfPageAsImage(pdfFile, pageNum, scale) {
+            const buffer = await pdfFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            const page = await pdf.getPage(pageNum);
+            const viewport = getSafeViewport(page, scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const url = URL.createObjectURL(blob);
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve({ img, url });
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        async function convertPdfToImageFiles(file, scale) {
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            const baseName = file.name.replace(/\.pdf$/i, '');
+            const outFiles = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = getSafeViewport(page, scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const pageName = pdf.numPages > 1 ? `${baseName}_${i}.png` : `${baseName}.png`;
+                const outFile = new File([blob], pageName, { type: 'image/png' });
+                outFile._sourcePdfFile = file;
+                outFile._pdfPageNum = i;
+                outFiles.push(outFile);
+            }
+            return outFiles;
+        }
+
+        async function handleFiles(files) {
             if (!files.length) return;
 
-            const fileArray = Array.from(files);
+            let fileArray = Array.from(files);
+
+            const isPdfFile = (file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            const pdfFiles = fileArray.filter(isPdfFile);
+            if (pdfFiles.length) {
+                showToast('يتم تحويل ملفات PDF إلى صور، يرجى الانتظار...');
+                const convertedFiles = [];
+                for (const pdfFile of pdfFiles) {
+                    try {
+                        convertedFiles.push(...(await convertPdfToImageFiles(pdfFile, DEFAULT_PDF_SCALE)));
+                    } catch (err) {
+                        console.error('PDF conversion failed:', pdfFile.name, err);
+                        showToast('فشل تحويل ملف PDF: ' + pdfFile.name, 'error');
+                    }
+                }
+                fileArray = [...fileArray.filter(f => !isPdfFile(f)), ...convertedFiles];
+                if (!fileArray.length) return;
+            }
+
             const isValidFile = (file) => {
                 const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
                 return file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.heic') || isSvgFile;
@@ -790,6 +918,9 @@
             singleFileData.isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
             singleFileData.originalFileSize = file.size;
             singleFileData.originalFileTypeLabel = getFileTypeLabel(file);
+            singleFileData.pdfSource = file._sourcePdfFile ? { file: file._sourcePdfFile, pageNum: file._pdfPageNum } : null;
+            pdfResolutionRow.classList.toggle('hidden', !singleFileData.pdfSource);
+            if (singleFileData.pdfSource) pdfResolutionSelect.value = String(DEFAULT_PDF_SCALE);
 
             if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
                 if (attempt === 1) showToast('يتم تحويل صورة HEIC، يرجى الانتظار...');
@@ -809,6 +940,30 @@
             }
         }
         
+        pdfResolutionSelect.addEventListener('change', async () => {
+            if (!singleFileData.pdfSource) return;
+            const scale = parseFloat(pdfResolutionSelect.value) || DEFAULT_PDF_SCALE;
+            pdfResolutionSelect.disabled = true;
+            const originalNoticeHTML = downloadingNotice.innerHTML;
+            downloadingNotice.innerHTML = 'جارٍ تبديل الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
+            estimatedSizeLabelWrap.classList.add('hidden');
+            downloadingNotice.classList.remove('hidden');
+            try {
+                const { img, url } = await renderPdfPageAsImage(singleFileData.pdfSource.file, singleFileData.pdfSource.pageNum, scale);
+                if (singleFileData.objectUrl) URL.revokeObjectURL(singleFileData.objectUrl);
+                singleFileData.objectUrl = url;
+                updateEditorWithNewImage(img);
+            } catch (err) {
+                console.error('PDF re-render failed:', err);
+                showToast('فشل تحديث دقة الصورة.', 'error');
+            } finally {
+                downloadingNotice.classList.add('hidden');
+                estimatedSizeLabelWrap.classList.remove('hidden');
+                downloadingNotice.innerHTML = originalNoticeHTML;
+                pdfResolutionSelect.disabled = false;
+            }
+        });
+
         function detectRealTransparency(image) {
             try {
                 const naturalW = image.naturalWidth || image.width;
@@ -1730,7 +1885,8 @@
                         originalWidth: img.width,
                         originalHeight: img.height,
                         aspectRatio: img.width / img.height,
-                        hasAlphaChannel: detectRealTransparency(img)
+                        hasAlphaChannel: detectRealTransparency(img),
+                        pdfSource: file._sourcePdfFile ? { file: file._sourcePdfFile, pageNum: file._pdfPageNum } : null
                     };
                     batchFiles.push(entry);
                     addBatchThumb(entry);
@@ -1739,8 +1895,43 @@
                 }
             }
             batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+            const hasPdfSource = batchFiles.some(f => f.pdfSource);
+            batchPdfResolutionRow.classList.toggle('hidden', !hasPdfSource);
             resetBatchControls();
+            if (hasPdfSource) {
+                batchFormatEnable.checked = true;
+                updateBatchGroupState();
+            }
         }
+
+        batchPdfResolutionSelect.addEventListener('change', async () => {
+            const scale = parseFloat(batchPdfResolutionSelect.value) || DEFAULT_PDF_SCALE;
+            const targets = batchFiles.filter(f => f.pdfSource);
+            if (!targets.length) return;
+            batchPdfResolutionSelect.disabled = true;
+            const originalNoticeHTML = batchDownloadingNotice.innerHTML;
+            batchDownloadingNotice.innerHTML = 'جارٍ تبديل الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
+            batchDownloadingNotice.classList.remove('hidden');
+            for (const entry of targets) {
+                try {
+                    const { img, url } = await renderPdfPageAsImage(entry.pdfSource.file, entry.pdfSource.pageNum, scale);
+                    if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
+                    entry.originalImage = img;
+                    entry.objectUrl = url;
+                    entry.originalWidth = img.width;
+                    entry.originalHeight = img.height;
+                    entry.aspectRatio = img.width / img.height;
+                    entry.hasAlphaChannel = detectRealTransparency(img);
+                    const thumbImg = batchThumbsGrid.querySelector(`.batch-thumb[data-id="${entry.id}"] img`);
+                    if (thumbImg) thumbImg.src = img.src;
+                } catch (err) {
+                    console.error('PDF re-render failed for', entry.name, err);
+                }
+            }
+            batchDownloadingNotice.classList.add('hidden');
+            batchDownloadingNotice.innerHTML = originalNoticeHTML;
+            batchPdfResolutionSelect.disabled = false;
+        });
 
         function addBatchThumb(entry) {
             const div = document.createElement('div');
@@ -1758,6 +1949,7 @@
                 if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
                 div.remove();
                 batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+                batchPdfResolutionRow.classList.toggle('hidden', !batchFiles.some(f => f.pdfSource));
                 if (batchFiles.length === 0) resetApp();
                 else toggleBatchQualityControl();
             });
