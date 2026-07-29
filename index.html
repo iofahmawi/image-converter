@@ -102,7 +102,7 @@
         #uploadArea.dragging, #uploadArea:hover {
             border-color: var(--primary-color); background-color: #fffaf5;
         }
-        #pdfUploadLink:hover {
+        #pdfUploadLink:hover, #pdfUploadLink.dragging {
             border-color: var(--primary-color) !important; background-color: #fffaf5;
         }
         #uploadArea .primary-text { font-size: 1.11em; font-weight: 600; margin: 0 0 10px 0; }
@@ -427,6 +427,7 @@
 
         <label for="pdfFileInput" id="pdfUploadLink" style="display: block; margin: 18px 0 7px 0; padding: 10px 20px; border: 2px dashed #d0dbe2; border-radius: 12px; color: var(--primary-color); font-size: 0.9em; font-weight: 600; cursor: pointer; text-decoration: none; transition: border-color 0.3s, background-color 0.3s;">أو ارفع ملف PDF</label>
         <input type="file" id="pdfFileInput" multiple accept="application/pdf, .pdf" style="display: none;">
+        <div id="pdfConvertingNotice" class="hidden" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 10px;">جارٍ معالجة الملف <span class="dot-loader"><span></span><span></span><span></span></span></div>
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -674,6 +675,7 @@
         const fileInput = document.getElementById('fileInput');
         const pdfFileInput = document.getElementById('pdfFileInput');
         const pdfUploadLink = document.getElementById('pdfUploadLink');
+        const pdfConvertingNotice = document.getElementById('pdfConvertingNotice');
         const imageEditor = document.getElementById('imageEditor');
         const singleEditorView = document.getElementById('singleEditorView');
         
@@ -779,6 +781,11 @@
         ['dragenter', 'dragover'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.add('dragging')));
         ['dragleave', 'drop'].forEach(ev => uploadArea.addEventListener(ev, () => uploadArea.classList.remove('dragging')));
         uploadArea.addEventListener('drop', handleFileDrop);
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => pdfUploadLink.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+        ['dragenter', 'dragover'].forEach(ev => pdfUploadLink.addEventListener(ev, () => pdfUploadLink.classList.add('dragging')));
+        ['dragleave', 'drop'].forEach(ev => pdfUploadLink.addEventListener(ev, () => pdfUploadLink.classList.remove('dragging')));
+        pdfUploadLink.addEventListener('drop', handleFileDrop);
         fileInput.addEventListener('change', handleFileInputChange);
         pdfFileInput.addEventListener('change', handleFileInputChange);
 
@@ -869,7 +876,8 @@
             const isPdfFile = (file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
             const pdfFiles = fileArray.filter(isPdfFile);
             if (pdfFiles.length) {
-                showToast('يتم تحويل ملفات PDF إلى صور، يرجى الانتظار...');
+                pdfConvertingNotice.classList.remove('hidden');
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const convertedFiles = [];
                 for (const pdfFile of pdfFiles) {
                     try {
@@ -879,6 +887,7 @@
                         showToast('فشل تحويل ملف PDF: ' + pdfFile.name, 'error');
                     }
                 }
+                pdfConvertingNotice.classList.add('hidden');
                 fileArray = [...fileArray.filter(f => !isPdfFile(f)), ...convertedFiles];
                 if (!fileArray.length) return;
             }
