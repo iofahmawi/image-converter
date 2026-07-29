@@ -508,8 +508,8 @@
                             <div id="pdfResolutionRow" class="control-row hidden">
                                 <label for="pdfResolutionSelect">دقة PDF:</label>
                                 <select id="pdfResolutionSelect" class="custom-select-wrapper">
-                                    <option value="2">جيدة</option>
-                                    <option value="4" selected>عالية</option>
+                                    <option value="2" selected>جيدة</option>
+                                    <option value="4">عالية</option>
                                     <option value="6">فائقة</option>
                                 </select>
                             </div>
@@ -616,8 +616,8 @@
                         <div id="batchPdfResolutionRow" class="control-row hidden">
                             <label for="batchPdfResolutionSelect">دقة PDF:</label>
                             <select id="batchPdfResolutionSelect">
-                                <option value="2">جيدة</option>
-                                <option value="4" selected>عالية</option>
+                                <option value="2" selected>جيدة</option>
+                                <option value="4">عالية</option>
                                 <option value="6">فائقة</option>
                             </select>
                         </div>
@@ -789,7 +789,7 @@
         fileInput.addEventListener('change', handleFileInputChange);
         pdfFileInput.addEventListener('change', handleFileInputChange);
 
-        const DEFAULT_PDF_SCALE = 4;
+        const DEFAULT_PDF_SCALE = 2;
 
         let cachedMaxCanvasDimension = null;
 
@@ -846,25 +846,40 @@
             });
         }
 
+        async function renderOnePdfPage(pdf, pageNum, scale, baseName, totalPages, sourceFile) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = getSafeViewport(page, scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const pageName = totalPages > 1 ? `${baseName}_${pageNum}.png` : `${baseName}.png`;
+            const outFile = new File([blob], pageName, { type: 'image/png' });
+            outFile._sourcePdfFile = sourceFile;
+            outFile._pdfPageNum = pageNum;
+            return outFile;
+        }
+
         async function convertPdfToImageFiles(file, scale) {
             const buffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
             const baseName = file.name.replace(/\.pdf$/i, '');
-            const outFiles = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = getSafeViewport(page, scale);
-                const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                const pageName = pdf.numPages > 1 ? `${baseName}_${i}.png` : `${baseName}.png`;
-                const outFile = new File([blob], pageName, { type: 'image/png' });
-                outFile._sourcePdfFile = file;
-                outFile._pdfPageNum = i;
-                outFiles.push(outFile);
+            const totalPages = pdf.numPages;
+            const pageNumbers = Array.from({ length: totalPages }, (_, idx) => idx + 1);
+            const outFiles = new Array(totalPages);
+
+            const CONCURRENCY = 3;
+            let nextIndex = 0;
+            async function worker() {
+                while (nextIndex < pageNumbers.length) {
+                    const myIndex = nextIndex++;
+                    const pageNum = pageNumbers[myIndex];
+                    outFiles[myIndex] = await renderOnePdfPage(pdf, pageNum, scale, baseName, totalPages, file);
+                }
             }
+            const workers = Array.from({ length: Math.min(CONCURRENCY, pageNumbers.length) }, () => worker());
+            await Promise.all(workers);
             return outFiles;
         }
 
