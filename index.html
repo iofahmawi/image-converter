@@ -508,7 +508,7 @@
                             <div id="pdfResolutionRow" class="control-row hidden">
                                 <label for="pdfResolutionSelect">دقة PDF:</label>
                                 <select id="pdfResolutionSelect" class="custom-select-wrapper">
-                                    <option value="2" selected>جيدة</option>
+                                    <option value="3" selected>جيدة</option>
                                     <option value="4">عالية</option>
                                     <option value="6">فائقة</option>
                                 </select>
@@ -616,7 +616,7 @@
                         <div id="batchPdfResolutionRow" class="control-row hidden">
                             <label for="batchPdfResolutionSelect">دقة PDF:</label>
                             <select id="batchPdfResolutionSelect">
-                                <option value="2" selected>جيدة</option>
+                                <option value="3" selected>جيدة</option>
                                 <option value="4">عالية</option>
                                 <option value="6">فائقة</option>
                             </select>
@@ -789,7 +789,7 @@
         fileInput.addEventListener('change', handleFileInputChange);
         pdfFileInput.addEventListener('change', handleFileInputChange);
 
-        const DEFAULT_PDF_SCALE = 2;
+        const DEFAULT_PDF_SCALE = 3;
 
         let cachedMaxCanvasDimension = null;
 
