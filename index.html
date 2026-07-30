@@ -31,6 +31,7 @@
     <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js"></script>
     <!-- Library to render PDF files as images -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             if (window.pdfjsLib) {
@@ -378,6 +379,7 @@
             display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
             margin-bottom: 10px; padding: 12px; max-height: 260px; overflow-y: auto;
             border: 1px solid var(--border-color); border-radius: 8px; background: #f9f9f9;
+            direction: ltr;
         }
         .batch-thumb { width: 64px; height: 64px; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #fff; }
         .batch-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -387,6 +389,13 @@
             line-height: 18px; cursor: pointer; padding: 0;
         }
         #batchCountLabel { text-align: center; font-size: 0.9rem; color: #777; margin-bottom: 12px; }
+        .batch-add-tile {
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed var(--border-color); background: transparent; cursor: pointer;
+            color: #999; transition: color 0.15s, border-color 0.15s;
+        }
+        .batch-add-tile:hover { color: var(--primary-color, #555); border-color: var(--primary-color, #999); }
+        .batch-add-icon { font-size: 26px; line-height: 1; font-weight: 300; }
 
         @media (max-width: 768px) {
             body { 
@@ -628,6 +637,7 @@
                                 <option value="webp">WEBP</option>
                                 <option value="png">PNG</option>
                                 <option value="avif">AVIF</option>
+                                <option value="pdf">PDF</option>
                                 <option value="ico">ICO</option>
                             </select>
                         </div>
@@ -750,6 +760,7 @@
         // --- App State ---
         let singleFileData = {};
         let batchFiles = [];
+        let batchIdCounter = 0;
         let batchScaleH = 1, batchScaleV = 1;
         let batchSelectedBgSource = 'transparent';
         let cropper = null;
@@ -1906,14 +1917,14 @@
             batchEditorView.style.display = 'block';
             batchThumbsGrid.innerHTML = '';
             batchFiles = [];
+            batchIdCounter = 0;
             batchCountLabel.textContent = `جارٍ تحميل ${files.length} صورة...`;
 
-            let idCounter = 0;
             for (const file of files) {
                 try {
                     const { img, isSvg, objectUrl } = await loadFileAsImage(file);
                     const entry = {
-                        id: idCounter++,
+                        id: batchIdCounter++,
                         name: file.name,
                         type: file.type || 'image/jpeg',
                         isSvg,
@@ -1932,12 +1943,97 @@
                 }
             }
             batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+            batchThumbsGrid.appendChild(createBatchAddTile());
             const hasPdfSource = batchFiles.some(f => f.pdfSource);
             batchPdfResolutionRow.classList.toggle('hidden', !hasPdfSource);
             resetBatchControls();
             if (hasPdfSource) {
                 batchFormatEnable.checked = true;
                 updateBatchGroupState();
+            }
+        }
+
+        function createBatchAddTile() {
+            const div = document.createElement('div');
+            div.className = 'batch-thumb batch-add-tile';
+            div.id = 'batchAddTile';
+            div.title = 'إضافة صور';
+            div.innerHTML = '<span class="batch-add-icon">+</span>';
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*,.heic,.pdf';
+            input.multiple = true;
+            input.style.display = 'none';
+            div.appendChild(input);
+            div.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                if (input.files && input.files.length) addFilesToBatch(Array.from(input.files));
+                input.value = '';
+            });
+            return div;
+        }
+
+        async function addFilesToBatch(files) {
+            if (!files.length) return;
+
+            let fileArray = files;
+            const isPdfFile = (file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            const pdfFiles = fileArray.filter(isPdfFile);
+            if (pdfFiles.length) {
+                pdfConvertingNotice.classList.remove('hidden');
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                const convertedFiles = [];
+                for (const pdfFile of pdfFiles) {
+                    try {
+                        convertedFiles.push(...(await convertPdfToImageFiles(pdfFile, DEFAULT_PDF_SCALE)));
+                    } catch (err) {
+                        console.error('PDF conversion failed:', pdfFile.name, err);
+                        showToast('فشل تحويل ملف PDF: ' + pdfFile.name, 'error');
+                    }
+                }
+                pdfConvertingNotice.classList.add('hidden');
+                fileArray = [...fileArray.filter(f => !isPdfFile(f)), ...convertedFiles];
+                if (!fileArray.length) return;
+            }
+
+            const isValidFile = (file) => {
+                const isSvgFile = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+                return file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.heic') || isSvgFile;
+            };
+            fileArray = fileArray.filter(isValidFile);
+            if (!fileArray.length) {
+                showToast('يرجى اختيار ملفات صور صالحة فقط.');
+                return;
+            }
+
+            let addedCount = 0;
+            for (const file of fileArray) {
+                try {
+                    const { img, isSvg, objectUrl } = await loadFileAsImage(file);
+                    const entry = {
+                        id: batchIdCounter++,
+                        name: file.name,
+                        type: file.type || 'image/jpeg',
+                        isSvg,
+                        originalImage: img,
+                        objectUrl,
+                        originalWidth: img.width,
+                        originalHeight: img.height,
+                        aspectRatio: img.width / img.height,
+                        hasAlphaChannel: detectRealTransparency(img),
+                        pdfSource: file._sourcePdfFile ? { file: file._sourcePdfFile, pageNum: file._pdfPageNum } : null
+                    };
+                    batchFiles.push(entry);
+                    addBatchThumb(entry);
+                    addedCount++;
+                } catch (err) {
+                    console.error('Failed to load file in batch:', file.name, err);
+                }
+            }
+            if (addedCount) {
+                batchCountLabel.textContent = `تم رفع ${batchFiles.length} صورة`;
+                batchPdfResolutionRow.classList.toggle('hidden', !batchFiles.some(f => f.pdfSource));
+                toggleBatchQualityControl();
             }
         }
 
@@ -1992,7 +2088,9 @@
             });
             div.appendChild(img);
             div.appendChild(removeBtn);
-            batchThumbsGrid.appendChild(div);
+            const addTile = document.getElementById('batchAddTile');
+            if (addTile) batchThumbsGrid.insertBefore(div, addTile);
+            else batchThumbsGrid.appendChild(div);
         }
 
         function resetBatchControls() {
@@ -2066,12 +2164,12 @@
         batchHeightInput.addEventListener('input', () => { updateBatchDimensionModeUI(); batchDimensionsEnable.checked = true; updateBatchGroupState(); });
 
         function toggleBatchQualityControl() {
-            const isLossy = ['jpeg', 'webp', 'avif'].includes(batchFormatSelect.value);
+            const isLossy = ['jpeg', 'webp', 'avif', 'pdf'].includes(batchFormatSelect.value);
             const isPng = batchFormatSelect.value === 'png';
             batchQualityControl.classList.toggle('hidden', !isLossy && !isPng);
             const noneHaveAlpha = batchFiles.length > 0 && batchFiles.every(f => !f.hasAlphaChannel);
             batchBgColorControl.classList.toggle('hidden', noneHaveAlpha);
-            const supportsTransparency = batchFormatSelect.value !== 'jpeg';
+            const supportsTransparency = batchFormatSelect.value !== 'jpeg' && batchFormatSelect.value !== 'pdf';
             batchBgTransparentBtn.classList.toggle('hidden', !supportsTransparency);
             if (!supportsTransparency && batchSelectedBgSource === 'transparent') {
                 batchSelectedBgSource = 'white';
@@ -2079,7 +2177,7 @@
             updateBatchBgPresetSelection();
         }
         batchFormatSelect.addEventListener('change', () => {
-            batchSelectedBgSource = batchFormatSelect.value === 'jpeg' ? 'white' : 'transparent';
+            batchSelectedBgSource = (batchFormatSelect.value === 'jpeg' || batchFormatSelect.value === 'pdf') ? 'white' : 'transparent';
             toggleBatchQualityControl(); batchFormatEnable.checked = true; updateBatchGroupState();
         });
         batchQualitySlider.addEventListener('input', () => {
@@ -2112,9 +2210,16 @@
             setBatchDownloadLoading(true);
             await waitForPaint();
 
+            const applyFormat = batchFormatEnable.checked;
+            if (applyFormat && batchFormatSelect.value === 'pdf') {
+                const outQuality = parseInt(batchQualitySlider.value, 10) / 100;
+                await combineBatchImagesToPdf(outQuality);
+                setBatchDownloadLoading(false);
+                return;
+            }
+
             const applyTransform = batchTransformEnable.checked;
             const applyDimensions = batchDimensionsEnable.checked;
-            const applyFormat = batchFormatEnable.checked;
 
             const fixedW = parseInt(batchWidthInput.value, 10) || 0;
             const fixedH = parseInt(batchHeightInput.value, 10) || 0;
@@ -2184,6 +2289,82 @@
                 showToast(`تعذّرت معالجة ${failedCount} صورة (على الأغلب بسبب حجمها الكبير جدًا).`);
             }
             setBatchDownloadLoading(false);
+        }
+
+        async function combineBatchImagesToPdf(quality) {
+            if (!batchFiles.length) return;
+            if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
+                showToast('تعذر تحميل مكتبة PDF، تحقق من الاتصال بالإنترنت.', 'error');
+                return;
+            }
+
+            const applyTransform = batchTransformEnable.checked;
+            const applyDimensions = batchDimensionsEnable.checked;
+
+            const fixedW = parseInt(batchWidthInput.value, 10) || 0;
+            const fixedH = parseInt(batchHeightInput.value, 10) || 0;
+            const percent = parseInt(batchPercentSlider.value, 10) || 100;
+
+            const { jsPDF } = jspdf;
+            let pdfDoc = null;
+            let failedCount = 0;
+
+            for (const entry of batchFiles) {
+                const transform = applyTransform
+                    ? { rotation: 0, scaleH: batchScaleH, scaleV: batchScaleV }
+                    : { rotation: 0, scaleH: 1, scaleV: 1 };
+
+                let targetW = entry.originalWidth, targetH = entry.originalHeight;
+                if (applyDimensions) {
+                    if (fixedW && fixedH) {
+                        targetW = fixedW; targetH = fixedH;
+                    } else if (fixedW) {
+                        targetW = fixedW; targetH = Math.round(fixedW / entry.aspectRatio);
+                    } else if (fixedH) {
+                        targetH = fixedH; targetW = Math.round(fixedH * entry.aspectRatio);
+                    } else {
+                        targetW = Math.round(entry.originalWidth * percent / 100);
+                        targetH = Math.round(entry.originalHeight * percent / 100);
+                    }
+                }
+
+                let blob;
+                try {
+                    // JPEG embedding keeps the resulting PDF close to the original photos' size;
+                    // PNG would be lossless but inflates file size massively for photographic content.
+                    blob = await processImage(entry.originalImage, targetW, targetH, 'jpeg', quality, transform, '#FFFFFF');
+                } catch (err) {
+                    console.error('PDF page processing failed for', entry.name, err);
+                    blob = null;
+                }
+                if (!blob) { failedCount++; continue; }
+
+                const dataUrl = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+
+                const pageW = targetW, pageH = targetH;
+                const orientation = pageW >= pageH ? 'l' : 'p';
+
+                if (!pdfDoc) {
+                    pdfDoc = new jsPDF({ unit: 'px', format: [pageW, pageH], orientation });
+                } else {
+                    pdfDoc.addPage([pageW, pageH], orientation);
+                }
+                pdfDoc.addImage(dataUrl, 'JPEG', 0, 0, pageW, pageH);
+            }
+
+            if (pdfDoc) {
+                pdfDoc.save('الصور_المجمعة.pdf');
+            } else {
+                showToast('تعذّر إنشاء ملف PDF.', 'error');
+            }
+
+            if (failedCount > 0) {
+                showToast(`تعذّرت معالجة ${failedCount} صورة عند إنشاء PDF.`);
+            }
         }
 
         batchDownloadButton.addEventListener('click', downloadBatchFiles);
