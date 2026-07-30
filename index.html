@@ -668,6 +668,11 @@
                 </div>
             </div>
         </div>
+
+        <div id="batchPreviewModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+            <button id="batchPreviewModalClose" type="button" style="position: absolute; top: 16px; left: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 22px; line-height: 1; cursor: pointer;">×</button>
+            <img id="batchPreviewModalImg" src="" alt="معاينة" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; direction: ltr;">
+        </div>
     </div>
 
     <footer class="site-footer">
@@ -729,6 +734,9 @@
         const batchEditorView = document.getElementById('batchEditorView');
         const batchCountLabel = document.getElementById('batchCountLabel');
         const batchThumbsGrid = document.getElementById('batchThumbsGrid');
+        const batchPreviewModal = document.getElementById('batchPreviewModal');
+        const batchPreviewModalImg = document.getElementById('batchPreviewModalImg');
+        const batchPreviewModalClose = document.getElementById('batchPreviewModalClose');
         const batchGroupTransform = document.getElementById('batchGroupTransform');
         const batchGroupDimensions = document.getElementById('batchGroupDimensions');
         const batchGroupFormat = document.getElementById('batchGroupFormat');
@@ -2066,18 +2074,37 @@
             batchPdfResolutionSelect.disabled = false;
         });
 
+        function openBatchPreviewModal(src) {
+            batchPreviewModalImg.src = src;
+            batchPreviewModal.classList.remove('hidden');
+        }
+        function closeBatchPreviewModal() {
+            batchPreviewModal.classList.add('hidden');
+            batchPreviewModalImg.src = '';
+        }
+        batchPreviewModalClose.addEventListener('click', closeBatchPreviewModal);
+        batchPreviewModal.addEventListener('click', (e) => {
+            if (e.target === batchPreviewModal) closeBatchPreviewModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !batchPreviewModal.classList.contains('hidden')) closeBatchPreviewModal();
+        });
+
         function addBatchThumb(entry) {
             const div = document.createElement('div');
             div.className = 'batch-thumb';
             div.dataset.id = entry.id;
             const img = document.createElement('img');
             img.src = entry.originalImage.src;
+            img.style.cursor = 'zoom-in';
+            img.addEventListener('click', () => openBatchPreviewModal(entry.originalImage.src));
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'remove-thumb';
             removeBtn.textContent = '×';
             removeBtn.title = 'إزالة';
-            removeBtn.addEventListener('click', () => {
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 batchFiles = batchFiles.filter(f => f.id !== entry.id);
                 if (entry.objectUrl) URL.revokeObjectURL(entry.objectUrl);
                 div.remove();
