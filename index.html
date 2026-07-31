@@ -579,7 +579,10 @@
             </div>
 
             <div id="batchEditorView" style="display:none;">
-                <div id="batchCountLabel"></div>
+                <div style="position: relative; margin-bottom: 12px;">
+                    <div id="batchCountLabel" style="margin-bottom: 0; text-align: center; transform: translateY(-3px);"></div>
+                    <button id="batchDirectionToggle" type="button" title="عكس اتجاه العرض" style="position: absolute; top: calc(50% - 2px); left: 0; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border-color); background: #fff; color: #666; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; box-sizing: border-box;"><span style="display: block; transform: translateY(-1px);">⇄</span></button>
+                </div>
                 <div id="batchThumbsGrid"></div>
 
                 <div id="controlsContainerBatch" class="controls-layout">
@@ -753,6 +756,8 @@
         const batchPreviewModalPrev = document.getElementById('batchPreviewModalPrev');
         const batchPreviewModalNext = document.getElementById('batchPreviewModalNext');
         const batchPreviewModalCounter = document.getElementById('batchPreviewModalCounter');
+        const batchDirectionToggle = document.getElementById('batchDirectionToggle');
+        let batchGridDirection = 'ltr';
         const batchGroupTransform = document.getElementById('batchGroupTransform');
         const batchGroupDimensions = document.getElementById('batchGroupDimensions');
         const batchGroupFormat = document.getElementById('batchGroupFormat');
@@ -1946,6 +1951,8 @@
             batchThumbsGrid.innerHTML = '';
             batchFiles = [];
             batchIdCounter = 0;
+            batchGridDirection = 'ltr';
+            applyBatchGridDirection();
             batchCountLabel.textContent = `جارٍ تحميل ${files.length} صورة...`;
 
             for (const file of files) {
@@ -2105,6 +2112,15 @@
             batchPreviewModalCounter.classList.toggle('hidden', !multi);
             batchPreviewModalCounter.textContent = `${batchPreviewIndex + 1} / ${batchFiles.length}`;
         }
+        function applyBatchGridDirection() {
+            batchThumbsGrid.style.direction = batchGridDirection;
+            batchPreviewModalCounter.style.direction = batchGridDirection;
+        }
+        batchDirectionToggle.addEventListener('click', () => {
+            batchGridDirection = batchGridDirection === 'ltr' ? 'rtl' : 'ltr';
+            applyBatchGridDirection();
+        });
+
         function openBatchPreviewModal(entryId) {
             const idx = batchFiles.findIndex(f => f.id === entryId);
             if (idx === -1) return;
@@ -2138,8 +2154,8 @@
         document.addEventListener('keydown', (e) => {
             if (batchPreviewModal.classList.contains('hidden')) return;
             if (e.key === 'Escape') closeBatchPreviewModal();
-            else if (e.key === 'ArrowLeft') showBatchPreviewPrev();
-            else if (e.key === 'ArrowRight') showBatchPreviewNext();
+            else if (e.key === 'ArrowLeft') { batchGridDirection === 'rtl' ? showBatchPreviewNext() : showBatchPreviewPrev(); }
+            else if (e.key === 'ArrowRight') { batchGridDirection === 'rtl' ? showBatchPreviewPrev() : showBatchPreviewNext(); }
         });
         let batchPreviewTouchStartX = null;
         batchPreviewModal.addEventListener('touchstart', (e) => {
@@ -2147,7 +2163,7 @@
         }, { passive: true });
         batchPreviewModal.addEventListener('touchend', (e) => {
             if (batchPreviewTouchStartX === null) return;
-            const dx = e.changedTouches[0].clientX - batchPreviewTouchStartX;
+            const dx = (e.changedTouches[0].clientX - batchPreviewTouchStartX) * (batchGridDirection === 'rtl' ? -1 : 1);
             const threshold = 40;
             if (dx <= -threshold) showBatchPreviewNext();
             else if (dx >= threshold) showBatchPreviewPrev();
