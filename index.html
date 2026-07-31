@@ -535,7 +535,7 @@
                             <div class="control-row">
                                 <label for="formatSelect">تحويل إلى:</label>
                                 <select id="formatSelect" class="custom-select-wrapper">
-                                    <option value="jpeg">JPEG</option>
+                                    <option value="jpeg">JPG</option>
                                     <option value="webp">WEBP</option>
                                     <option value="png">PNG</option>
                                     <option value="avif">AVIF</option>
@@ -643,7 +643,7 @@
                         <div class="control-row">
                             <label for="batchFormatSelect">تحويل إلى:</label>
                             <select id="batchFormatSelect">
-                                <option value="jpeg">JPEG</option>
+                                <option value="jpeg">JPG</option>
                                 <option value="webp">WEBP</option>
                                 <option value="png">PNG</option>
                                 <option value="avif">AVIF</option>
@@ -1777,6 +1777,10 @@
             return new Blob([buffer], { type: 'image/x-icon' });
         }
 
+        function getFileExtension(format) {
+            return format === 'jpeg' ? 'jpg' : format;
+        }
+
         async function processImage(image, newWidth, newHeight, format, quality, transform, bgColor, precise = true) {
             const isSideways = transform.rotation % 180 !== 0;
             const finalWidth = isSideways ? newHeight : newWidth;
@@ -1851,7 +1855,7 @@
                 const finalW = isSideways ? currentHeight : currentWidth;
                 const finalH = isSideways ? currentWidth : currentHeight;
                 const baseFileName = name.split('.').slice(0, -1).join('.') || name;
-                const newFileName = `${baseFileName}_${finalW}x${finalH}.${format}`;
+                const newFileName = `${baseFileName}_${finalW}x${finalH}.${getFileExtension(format)}`;
                 triggerDownload(URL.createObjectURL(blob), newFileName);
             } else {
                 showToast('فشل التحويل.', 'error');
@@ -2357,16 +2361,17 @@
                 if (!blob) { failedCount++; continue; }
 
                 const baseName = entry.name.split('.').slice(0, -1).join('.') || entry.name;
-                let fileName = `${baseName}.${entryFormat}`;
+                const entryExt = getFileExtension(entryFormat);
+                let fileName = `${baseName}.${entryExt}`;
                 let i = 1;
-                while (usedNames.has(fileName)) { fileName = `${baseName}_${i++}.${entryFormat}`; }
+                while (usedNames.has(fileName)) { fileName = `${baseName}_${i++}.${entryExt}`; }
                 usedNames.add(fileName);
                 zip.file(fileName, blob);
             }
 
             try {
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
-                triggerDownload(URL.createObjectURL(zipBlob), 'الصور_المعدلة.zip');
+                triggerDownload(URL.createObjectURL(zipBlob), 'converted_images.zip');
             } catch (err) {
                 console.error('ZIP generation failed:', err);
                 showToast('فشل إنشاء ملف ZIP.', 'error');
@@ -2444,7 +2449,7 @@
             }
 
             if (pdfDoc) {
-                pdfDoc.save('الصور_المجمعة.pdf');
+                pdfDoc.save('merged_images.pdf');
             } else {
                 showToast('تعذّر إنشاء ملف PDF.', 'error');
             }
