@@ -757,7 +757,7 @@
         const batchPreviewModalNext = document.getElementById('batchPreviewModalNext');
         const batchPreviewModalCounter = document.getElementById('batchPreviewModalCounter');
         const batchDirectionToggle = document.getElementById('batchDirectionToggle');
-        let batchGridDirection = 'ltr';
+        let batchGridDirection = localStorage.getItem('batchGridDirection') === 'rtl' ? 'rtl' : 'ltr';
         const batchGroupTransform = document.getElementById('batchGroupTransform');
         const batchGroupDimensions = document.getElementById('batchGroupDimensions');
         const batchGroupFormat = document.getElementById('batchGroupFormat');
@@ -1951,7 +1951,6 @@
             batchThumbsGrid.innerHTML = '';
             batchFiles = [];
             batchIdCounter = 0;
-            batchGridDirection = 'ltr';
             applyBatchGridDirection();
             batchCountLabel.textContent = `جارٍ تحميل ${files.length} صورة...`;
 
@@ -2118,6 +2117,7 @@
         }
         batchDirectionToggle.addEventListener('click', () => {
             batchGridDirection = batchGridDirection === 'ltr' ? 'rtl' : 'ltr';
+            localStorage.setItem('batchGridDirection', batchGridDirection);
             applyBatchGridDirection();
         });
 
