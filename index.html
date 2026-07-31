@@ -384,10 +384,17 @@
         .batch-thumb { width: 88px; height: 88px; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #fff; }
         .batch-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .batch-thumb .remove-thumb {
-            position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.6); color: #fff;
-            border: none; border-radius: 50%; width: 23px; height: 23px; font-size: 14px;
-            line-height: 23px; cursor: pointer; padding: 0;
+            position: absolute; top: 3px; left: 3px; background: rgba(0,0,0,0.6);
+            border: none; border-radius: 50%; width: 23px; height: 23px;
+            cursor: pointer; padding: 0;
         }
+        .batch-thumb .remove-thumb::before,
+        .batch-thumb .remove-thumb::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 9px; height: 1.5px; background: #fff; border-radius: 1px;
+        }
+        .batch-thumb .remove-thumb::before { transform: translate(-50%, -50%) rotate(45deg); }
+        .batch-thumb .remove-thumb::after { transform: translate(-50%, -50%) rotate(-45deg); }
         #batchCountLabel { text-align: center; font-size: 0.9rem; color: #777; margin-bottom: 12px; }
         .batch-add-tile {
             display: flex; align-items: center; justify-content: center;
@@ -2154,7 +2161,7 @@
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'remove-thumb';
-            removeBtn.textContent = '×';
+            removeBtn.setAttribute('aria-label', 'إزالة');
             removeBtn.title = 'إزالة';
             removeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
