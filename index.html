@@ -520,7 +520,7 @@
                                     <input type="number" id="heightInput" min="1" placeholder="الارتفاع">
                                 </div>
                             </div>
-                             <div class="info-row" style="font-size: 0.85rem; color: #888;">الأبعاد الأصلية : <span id="originalDimensions"></span></div>
+                             <div class="info-row" id="originalDimensionsRow" style="font-size: 0.85rem; color: #888; cursor: pointer;" title="اضغط للرجوع للأبعاد الأصلية">الأبعاد الأصلية : <span id="originalDimensions"></span></div>
                         </div>
                         <div class="control-group">
                             <h3>الصيغة والجودة</h3>
@@ -1216,6 +1216,12 @@
             widthInput.value = isSideways ? newHeight : newWidth;
             heightInput.value = isSideways ? newWidth : newHeight;
             updatePreviewTransform();
+        });
+        const originalDimensionsRow = document.getElementById('originalDimensionsRow');
+        originalDimensionsRow.addEventListener('click', () => {
+            percentSlider.value = 100;
+            percentSlider.dispatchEvent(new Event('input'));
+            percentSlider.dispatchEvent(new Event('change'));
         });
         percentSlider.addEventListener('change', scheduleSizeEstimate);
 
