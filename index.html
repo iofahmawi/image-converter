@@ -446,7 +446,7 @@
 
         <label for="pdfFileInput" id="pdfUploadLink" style="display: block; margin: 18px 0 7px 0; padding: 10px 20px; border: 2px dashed #d0dbe2; border-radius: 12px; color: var(--primary-color); font-size: 0.9em; font-weight: 600; cursor: pointer; text-decoration: none; transition: border-color 0.3s, background-color 0.3s;">ارفع ملف PDF</label>
         <input type="file" id="pdfFileInput" multiple accept="application/pdf, .pdf" style="display: none;">
-        <div id="pdfConvertingNotice" class="hidden" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 10px;">جارٍ معالجة الملف <span class="dot-loader"><span></span><span></span><span></span></span></div>
+        <div id="pdfConvertingNotice" class="hidden" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 10px;"><span id="pdfConvertingNoticeText">جارٍ معالجة الملف</span> <span class="dot-loader"><span></span><span></span><span></span></span></div>
 
         <div id="imageEditor">
             <div id="singleEditorView">
@@ -931,6 +931,7 @@
             const isPdfFile = (file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
             const pdfFiles = fileArray.filter(isPdfFile);
             if (pdfFiles.length) {
+                document.getElementById('pdfConvertingNoticeText').textContent = pdfFiles.length > 1 ? 'جارٍ معالجة الملفات' : 'جارٍ معالجة الملف';
                 pdfConvertingNotice.classList.remove('hidden');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const convertedFiles = [];
@@ -2020,6 +2021,7 @@
             const isPdfFile = (file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
             const pdfFiles = fileArray.filter(isPdfFile);
             if (pdfFiles.length) {
+                document.getElementById('pdfConvertingNoticeText').textContent = pdfFiles.length > 1 ? 'جارٍ معالجة الملفات' : 'جارٍ معالجة الملف';
                 pdfConvertingNotice.classList.remove('hidden');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const convertedFiles = [];
