@@ -561,6 +561,7 @@
                             </div>
                             <div id="estimatedSizeRow" style="text-align: center; font-size: 0.85rem; color: #888; margin-top: 28px;">
                                 <span id="estimatedSizeLabelWrap">الحجم المتوقع : <span id="estimatedSizeText">—</span></span>
+                                <span id="sizeCalculatingNotice" class="hidden">جارٍ حساب الحجم <span class="dot-loader"><span></span><span></span><span></span></span></span>
                                 <span id="avifLoadingNotice" class="hidden">جارٍ تحميل ترميز AVIF لأول مرة...</span>
                                 <span id="downloadingNotice" class="hidden">جارٍ التحويل <span class="dot-loader"><span></span><span></span><span></span></span></span>
                             </div>
@@ -736,6 +737,7 @@
         const estimatedSizeText = document.getElementById('estimatedSizeText');
         const estimatedSizeRow = document.getElementById('estimatedSizeRow');
         const estimatedSizeLabelWrap = document.getElementById('estimatedSizeLabelWrap');
+        const sizeCalculatingNotice = document.getElementById('sizeCalculatingNotice');
         const avifLoadingNotice = document.getElementById('avifLoadingNotice');
         const downloadingNotice = document.getElementById('downloadingNotice');
         const actionsContainer = document.getElementById('actionsContainer');
@@ -1021,7 +1023,7 @@
             const scale = parseFloat(pdfResolutionSelect.value) || DEFAULT_PDF_SCALE;
             pdfResolutionSelect.disabled = true;
             const originalNoticeHTML = downloadingNotice.innerHTML;
-            downloadingNotice.innerHTML = 'جارٍ تبديل الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
+            downloadingNotice.innerHTML = 'جارٍ تغيير الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
             estimatedSizeLabelWrap.classList.add('hidden');
             downloadingNotice.classList.remove('hidden');
             try {
@@ -1693,8 +1695,9 @@
         async function estimateFileSize() {
             if (!singleFileData.originalImage) return;
             const myToken = ++sizeEstimateToken;
-            estimatedSizeText.textContent = 'جارٍ الحساب...';
-            // نعطي المتصفح فرصة يرسم نص "جارٍ الحساب..." قبل بدء عملية الضغط الثقيلة والمتزامنة (خصوصًا ضغط PNG عبر UPNG)
+            estimatedSizeLabelWrap.classList.add('hidden');
+            sizeCalculatingNotice.classList.remove('hidden');
+            // نعطي المتصفح فرصة يرسم إشعار "جارٍ حساب الحجم" قبل بدء عملية الضغط الثقيلة والمتزامنة (خصوصًا ضغط PNG عبر UPNG)
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             if (myToken !== sizeEstimateToken) return; // انطلب تقدير جديد أثناء الانتظار، نتجاهل هذا القديم
 
@@ -1702,7 +1705,7 @@
             const quality = (format === 'jpeg' || format === 'webp' || format === 'avif' || format === 'png') ? parseInt(qualitySlider.value, 10) / 100 : undefined;
             const bgColor = format === 'jpeg' ? (resolveBgColor() || '#FFFFFF') : resolveBgColor();
             const { originalImage, currentWidth, currentHeight } = singleFileData;
-            if (!currentWidth || !currentHeight) return;
+            if (!currentWidth || !currentHeight) { sizeCalculatingNotice.classList.add('hidden'); estimatedSizeLabelWrap.classList.remove('hidden'); return; }
 
             // نشفّر بالدقة الكاملة دائمًا (نتيجة مطابقة تمامًا) إلا لصور AVIF الكبيرة جدًا
             // (تصغير خفيف بالنص فقط لتفادي البطء، عشان ما يضخّم الخطأ عند إعادة التكبير الحسابي)
@@ -1715,11 +1718,18 @@
             try {
                 const blob = await processImage(originalImage, sampleWidth, sampleHeight, format, quality, { rotation, scaleH, scaleV }, bgColor, true);
                 if (myToken !== sizeEstimateToken) return; // نتيجة قديمة، تجاهلها
-                if (!blob) { estimatedSizeText.textContent = '—'; return; }
-                const areaRatio = (currentWidth * currentHeight) / (sampleWidth * sampleHeight);
-                estimatedSizeText.textContent = formatBytes(blob.size * areaRatio);
+                if (!blob) { estimatedSizeText.textContent = '—'; }
+                else {
+                    const areaRatio = (currentWidth * currentHeight) / (sampleWidth * sampleHeight);
+                    estimatedSizeText.textContent = formatBytes(blob.size * areaRatio);
+                }
             } catch (err) {
                 if (myToken === sizeEstimateToken) estimatedSizeText.textContent = '—';
+            } finally {
+                if (myToken === sizeEstimateToken) {
+                    sizeCalculatingNotice.classList.add('hidden');
+                    estimatedSizeLabelWrap.classList.remove('hidden');
+                }
             }
         }
 
@@ -2085,7 +2095,7 @@
             if (!targets.length) return;
             batchPdfResolutionSelect.disabled = true;
             const originalNoticeHTML = batchDownloadingNotice.innerHTML;
-            batchDownloadingNotice.innerHTML = 'جارٍ تبديل الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
+            batchDownloadingNotice.innerHTML = 'جارٍ تغيير الدقة <span class="dot-loader"><span></span><span></span><span></span></span>';
             batchDownloadingNotice.classList.remove('hidden');
             for (const entry of targets) {
                 try {
